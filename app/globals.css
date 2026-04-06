@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    --background: 230 25% 97%;
+    --foreground: 230 15% 12%;
+    --surface: 0 0% 100%;
+    --surface-elevated: 230 20% 98%;
+    --border: 230 15% 88%;
+    --muted: 230 15% 94%;
+    --muted-foreground: 230 10% 50%;
+    --radius: 1rem;
+    --primary: #7C3AED;
+    --primary-hsl: 262 83% 58%;
+  }
+
+  .dark {
+    --background: 230 35% 6%;
+    --foreground: 230 15% 95%;
+    --surface: 230 30% 9%;
+    --surface-elevated: 230 25% 12%;
+    --border: 230 20% 16%;
+    --muted: 230 25% 14%;
+    --muted-foreground: 230 10% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background: hsl(var(--border));
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply rounded-2xl border border-white/10 backdrop-blur-md;
+    background: hsl(var(--surface) / 0.8);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .dark .glass-card {
+    background: hsl(var(--surface) / 0.7);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .glass-card-elevated {
+    @apply rounded-2xl border backdrop-blur-md;
+    border-color: hsl(var(--border));
+    background: hsl(var(--surface-elevated));
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .glass-card-elevated {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.20);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--primary) 0%, #06B6D4 100%);
+  }
+
+  .primary-gradient {
+    background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, #06B6D4) 100%);
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .sidebar-item:hover {
+    color: hsl(var(--foreground));
+    background: hsl(var(--muted));
+  }
+
+  .sidebar-item.active {
+    color: white;
+    background: var(--primary);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 40%, transparent);
+  }
+
+  .metric-value {
+    @apply text-2xl font-bold tracking-tight;
+    color: hsl(var(--foreground));
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--surface-elevated)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  .badge-revenue {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10B981;
+  }
+
+  .badge-expense {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(239, 68, 68, 0.12);
+    color: #EF4444;
+  }
+
+  .badge-pending {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(245, 158, 11, 0.12);
+    color: #F59E0B;
+  }
+
+  .badge-completed {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10B981;
+  }
+
+  .badge-cancelled {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+    background: rgba(107, 114, 128, 0.12);
+    color: #6B7280;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-95;
+    background: var(--primary);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 35%, transparent);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 45%, transparent);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95;
+    color: hsl(var(--muted-foreground));
+    background: transparent;
+  }
+
+  .btn-ghost:hover {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 border;
+    border-color: hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+
+  .btn-outline:hover {
+    background: hsl(var(--muted));
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2.5 rounded-xl text-sm transition-all duration-200 outline-none border;
+    background: hsl(var(--surface));
+    border-color: hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+
+  .input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+  }
+
+  .input-field::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
