@@ -8,7 +8,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useAppStore } from '@/store/useAppStore'
 import { usePlan } from '@/hooks/usePlan'
 import { supabase } from '@/lib/supabase'
-import { useState, useEffect } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const plans = [
@@ -51,13 +51,52 @@ const plans = [
   },
 ]
 
+function PaymentFeedback() {
+  const searchParams = useSearchParams()
+  const status = searchParams.get('status')
+  const returnedPlan = searchParams.get('plan')
+
+  if (!status) return null
+  return (
+    <>
+      {status === 'success' && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 p-4 rounded-xl border border-green-500/20 bg-green-500/10 text-green-400">
+          <CheckCircle size={20} />
+          <div>
+            <p className="text-sm font-semibold">Pagamento aprovado!</p>
+            <p className="text-xs opacity-80">Seu plano {returnedPlan} foi ativado. Bem-vindo!</p>
+          </div>
+        </motion.div>
+      )}
+      {status === 'pending' && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
+          <Clock size={20} />
+          <div>
+            <p className="text-sm font-semibold">Pagamento em processamento</p>
+            <p className="text-xs opacity-80">Assim que confirmado, seu plano será ativado automaticamente.</p>
+          </div>
+        </motion.div>
+      )}
+      {status === 'failure' && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400">
+          <AlertCircle size={20} />
+          <div>
+            <p className="text-sm font-semibold">Pagamento não aprovado</p>
+            <p className="text-xs opacity-80">Tente novamente ou use outra forma de pagamento.</p>
+          </div>
+        </motion.div>
+      )}
+    </>
+  )
+}
+
 export default function AssinaturaPage() {
   const { brandSettings } = useAppStore()
   const { plan: currentPlan, loading: planLoading } = usePlan()
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
-  const searchParams = useSearchParams()
-  const status = searchParams.get('status')
-  const returnedPlan = searchParams.get('plan')
 
   const handleCheckout = async (planId: string) => {
     setCheckoutLoading(planId)
@@ -99,36 +138,9 @@ export default function AssinaturaPage() {
         </div>
 
         {/* Payment return feedback */}
-        {status === 'success' && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 p-4 rounded-xl border border-green-500/20 bg-green-500/10 text-green-400">
-            <CheckCircle size={20} />
-            <div>
-              <p className="text-sm font-semibold">Pagamento aprovado!</p>
-              <p className="text-xs opacity-80">Seu plano {returnedPlan} foi ativado. Bem-vindo!</p>
-            </div>
-          </motion.div>
-        )}
-        {status === 'pending' && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
-            <Clock size={20} />
-            <div>
-              <p className="text-sm font-semibold">Pagamento em processamento</p>
-              <p className="text-xs opacity-80">Assim que confirmado, seu plano será ativado automaticamente.</p>
-            </div>
-          </motion.div>
-        )}
-        {status === 'failure' && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400">
-            <AlertCircle size={20} />
-            <div>
-              <p className="text-sm font-semibold">Pagamento não aprovado</p>
-              <p className="text-xs opacity-80">Tente novamente ou use outra forma de pagamento.</p>
-            </div>
-          </motion.div>
-        )}
+        <Suspense fallback={null}>
+          <PaymentFeedback />
+        </Suspense>
 
         {/* Current plan banner */}
         {!planLoading && (
