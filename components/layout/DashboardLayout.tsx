@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useAppStore } from '@/store/useAppStore'
+import { useAuth } from '@/hooks/useAuth'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { MobileNav } from './MobileNav'
@@ -12,6 +13,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { brandSettings } = useAppStore()
+  useAuth()
 
   useEffect(() => {
     document.documentElement.style.setProperty('--primary', brandSettings.primaryColor)

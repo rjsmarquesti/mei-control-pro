@@ -2,11 +2,12 @@
 
 import { useTheme } from 'next-themes'
 import { motion } from 'framer-motion'
-import { Sun, Moon, Bell, HelpCircle, ChevronDown, Search } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Sun, Moon, Bell, HelpCircle, ChevronDown, Search, LogOut } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { getGreeting } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
+import { signOut } from '@/hooks/useAuth'
 
 const YEARS = ['2023', '2024', '2025']
 
@@ -17,6 +18,8 @@ export function Header() {
   const [selectedYear, setSelectedYear] = useState('2025')
   const [showYearDropdown, setShowYearDropdown] = useState(false)
   const [hasNotifications] = useState(3)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -133,26 +136,48 @@ export function Header() {
             </motion.button>
           )}
 
-          {/* Avatar */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 cursor-pointer pl-2"
-          >
-            <div
-              className="h-8 w-8 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0"
-              style={{
-                background: `linear-gradient(135deg, ${brandSettings.primaryColor}, color-mix(in srgb, ${brandSettings.primaryColor} 70%, #06B6D4))`,
-              }}
+          {/* Avatar + dropdown */}
+          <div className="relative" ref={userMenuRef}>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 cursor-pointer pl-2"
             >
-              {user?.name?.charAt(0) ?? 'R'}
-            </div>
-            <div className="hidden lg:block">
-              <p className="text-xs font-semibold text-foreground leading-none">{user?.name ?? 'Rogério'}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">MEI desde {user?.meiSince ?? '2023'}</p>
-            </div>
-            <ChevronDown size={14} className="text-muted-foreground hidden lg:block" />
-          </motion.div>
+              <div
+                className="h-8 w-8 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${brandSettings.primaryColor}, color-mix(in srgb, ${brandSettings.primaryColor} 70%, #06B6D4))`,
+                }}
+              >
+                {user?.name?.charAt(0) ?? 'U'}
+              </div>
+              <div className="hidden lg:block">
+                <p className="text-xs font-semibold text-foreground leading-none">{user?.name ?? 'Usuário'}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{user?.email ?? ''}</p>
+              </div>
+              <ChevronDown size={14} className="text-muted-foreground hidden lg:block" />
+            </motion.div>
+
+            {showUserMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute right-0 top-full mt-2 w-44 glass-card-elevated border border-border shadow-glass-lg overflow-hidden z-50 rounded-xl"
+              >
+                <div className="px-3 py-2 border-b border-border/50">
+                  <p className="text-xs font-semibold text-foreground truncate">{user?.name ?? 'Usuário'}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{user?.email ?? ''}</p>
+                </div>
+                <button
+                  onClick={() => { setShowUserMenu(false); signOut() }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut size={14} /> Sair
+                </button>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
     </header>
