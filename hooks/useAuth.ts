@@ -10,18 +10,27 @@ export function useAuth() {
   const setUser = useAppStore((s) => s.setUser)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         router.push('/login')
         return
       }
+
       const u = session.user
+
+      // Try to load profile from database
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', u.id)
+        .single()
+
       setUser({
         id: u.id,
-        name: u.user_metadata?.name ?? u.email?.split('@')[0] ?? 'Usuário',
+        name: profile?.name ?? u.user_metadata?.name ?? u.email?.split('@')[0] ?? 'Usuário',
         email: u.email ?? '',
-        company: u.user_metadata?.company ?? 'Minha Empresa',
-        meiSince: u.user_metadata?.meiSince ?? new Date().getFullYear().toString(),
+        company: profile?.company ?? u.user_metadata?.company ?? 'Minha Empresa',
+        meiSince: profile?.mei_since ?? u.user_metadata?.meiSince ?? new Date().getFullYear().toString(),
       })
     })
 

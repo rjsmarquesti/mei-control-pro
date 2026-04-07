@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Loader2, TrendingUp, Shield, BarChart3 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, TrendingUp, Shield, BarChart3, User, Phone, MapPin } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -10,10 +10,20 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [city, setCity] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [mode, setMode] = useState<'login' | 'register'>('login')
+
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 2) return digits
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,15 +34,32 @@ export default function LoginPage() {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
+        router.push('/dashboard')
       } else {
-        const { error } = await supabase.auth.signUp({ email, password })
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name, phone, city } },
+        })
         if (error) throw error
+
+        if (data.user) {
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            name,
+            email,
+            phone,
+            city,
+            updated_at: new Date().toISOString(),
+          })
+        }
+        router.push('/dashboard/onboarding')
       }
-      router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message === 'Invalid login credentials'
-        ? 'Email ou senha incorretos'
-        : err.message ?? 'Erro ao autenticar')
+      const msg = err.message ?? ''
+      if (msg.includes('Invalid login credentials')) setError('Email ou senha incorretos')
+      else if (msg.includes('already registered')) setError('Este email já está cadastrado')
+      else setError(msg || 'Erro ao autenticar')
     } finally {
       setIsLoading(false)
     }
@@ -77,14 +104,14 @@ export default function LoginPage() {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-6">
+      <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md py-8"
         >
-          <div className="mb-8">
+          <div className="mb-6">
             <h2 className="text-2xl font-bold text-foreground">
               {mode === 'login' ? 'Entrar na conta' : 'Criar conta'}
             </h2>
@@ -94,6 +121,61 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'register' && (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                    Nome completo
+                  </label>
+                  <div className="relative">
+                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Seu nome completo"
+                      required
+                      className="input-field pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                    Celular / WhatsApp (com DDD)
+                  </label>
+                  <div className="relative">
+                    <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(formatPhone(e.target.value))}
+                      placeholder="(11) 99999-0000"
+                      required
+                      className="input-field pl-9"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                    Cidade
+                  </label>
+                  <div className="relative">
+                    <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="São Paulo, SP"
+                      required
+                      className="input-field pl-9"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
                 Email
@@ -119,6 +201,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
+                  minLength={6}
                   className="input-field pr-10"
                 />
                 <button
@@ -146,7 +229,9 @@ export default function LoginPage() {
               disabled={isLoading}
               className="btn-primary w-full mt-2"
             >
-              {isLoading ? <><Loader2 size={16} className="animate-spin" /> Aguarde...</> : mode === 'login' ? 'Entrar' : 'Criar conta'}
+              {isLoading
+                ? <><Loader2 size={16} className="animate-spin" /> Aguarde...</>
+                : mode === 'login' ? 'Entrar' : 'Criar conta'}
             </button>
           </form>
 
