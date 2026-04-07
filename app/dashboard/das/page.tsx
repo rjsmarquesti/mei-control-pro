@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Receipt, CheckCircle2, Clock, AlertTriangle, Plus, ExternalLink } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { PlanGate } from '@/components/plan/PlanGate'
 import { DASCard } from '@/components/dashboard/DASCard'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
@@ -29,6 +30,7 @@ export default function DASPage() {
 
   return (
     <DashboardLayout>
+      <PlanGate requiredPlan="pro" featureName="DAS & Impostos">
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -102,6 +104,7 @@ export default function DASPage() {
           <p className="text-xs text-muted-foreground">O DAS (Documento de Arrecadação do Simples Nacional) é pago mensalmente e inclui INSS, ISS e/ou ICMS. O vencimento é todo dia 20 de cada mês. Valor atual: <strong className="text-foreground">R$ 70,60/mês</strong>.</p>
         </motion.div>
       </div>
+    </PlanGate>
     </DashboardLayout>
   )
 }

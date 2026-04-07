@@ -3,9 +3,11 @@
 export const dynamic = 'force-dynamic'
 
 import { motion } from 'framer-motion'
-import { Check, Zap, Crown, Building2, ArrowRight } from 'lucide-react'
+import { Check, Zap, Crown, Building2, ArrowRight, Sparkles } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useAppStore } from '@/store/useAppStore'
+import { usePlan } from '@/hooks/usePlan'
+import { PLAN_CONFIGS } from '@/lib/plans'
 
 const plans = [
   {
@@ -15,40 +17,49 @@ const plans = [
     icon: Zap,
     color: '#6B7280',
     description: 'Para quem está começando',
-    features: ['Dashboard básico', 'Até 20 lançamentos/mês', 'Relatório simples', 'Suporte por email'],
-    missing: ['Relatórios avançados', 'Exportar PDF/Excel', 'IRPF automático', 'Múltiplos usuários'],
+    features: ['Dashboard', 'Receitas e despesas (20/mês)', 'Perfil'],
+    missing: ['Financeiro', 'Categorias', 'Relatórios', 'DAS & Impostos', 'IRPF Anual'],
     cta: 'Plano atual',
-    current: true,
+  },
+  {
+    id: 'basic',
+    name: 'Basic',
+    price: 19.90,
+    icon: Zap,
+    color: '#06B6D4',
+    description: 'Para MEI organizado',
+    features: ['Tudo do Gratuito', 'Lançamentos ilimitados', 'Financeiro', 'Categorias'],
+    missing: ['Relatórios avançados', 'DAS & Impostos', 'IRPF Anual'],
+    cta: 'Assinar Basic',
   },
   {
     id: 'pro',
     name: 'Pro',
-    price: 29.90,
+    price: 39.90,
     icon: Crown,
     color: '#7C3AED',
     description: 'Para MEI em crescimento',
-    features: ['Tudo do Gratuito', 'Lançamentos ilimitados', 'Relatórios avançados', 'Exportar PDF/Excel', 'IRPF automático', 'Alertas de limite MEI', 'Suporte prioritário'],
-    missing: ['Múltiplos usuários', 'API de integração'],
+    features: ['Tudo do Basic', 'Relatórios avançados', 'DAS & Impostos', 'Exportar PDF'],
+    missing: ['IRPF Anual'],
     cta: 'Assinar Pro',
-    current: false,
     popular: true,
   },
   {
-    id: 'business',
-    name: 'Business',
-    price: 79.90,
+    id: 'premium',
+    name: 'Premium',
+    price: 59.90,
     icon: Building2,
-    color: '#06B6D4',
-    description: 'Para escritórios contábeis',
-    features: ['Tudo do Pro', 'Múltiplos usuários', 'Múltiplos CNPJs', 'API de integração', 'Personalização da marca', 'Gestor de clientes', 'Suporte 24/7'],
+    color: '#F59E0B',
+    description: 'Acesso total',
+    features: ['Tudo do Pro', 'IRPF Anual automático', 'Suporte prioritário'],
     missing: [],
-    cta: 'Assinar Business',
-    current: false,
+    cta: 'Assinar Premium',
   },
 ]
 
 export default function AssinaturaPage() {
   const { brandSettings } = useAppStore()
+  const { plan: currentPlan } = usePlan()
 
   return (
     <DashboardLayout>
@@ -59,21 +70,30 @@ export default function AssinaturaPage() {
         </div>
 
         {/* Current plan banner */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 flex items-center justify-between flex-wrap gap-3"
-          style={{ borderLeft: `4px solid ${brandSettings.primaryColor}` }}>
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: `color-mix(in srgb, ${brandSettings.primaryColor} 15%, transparent)` }}>
-              <Zap size={18} style={{ color: brandSettings.primaryColor }} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground">Plano Gratuito — Ativo</p>
-              <p className="text-xs text-muted-foreground">Renova automaticamente · Sem cobrança</p>
-            </div>
-          </div>
-          <button className="btn-primary gap-2 text-sm">
-            <Crown size={14} /> Fazer upgrade
-          </button>
-        </motion.div>
+        {(() => {
+          const cfg = plans.find(p => p.id === currentPlan) ?? plans[0]
+          return (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-5 flex items-center justify-between flex-wrap gap-3"
+              style={{ borderLeft: `4px solid ${cfg.color}` }}>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: `${cfg.color}18` }}>
+                  <Sparkles size={18} style={{ color: cfg.color }} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Plano {cfg.name} — Ativo</p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentPlan === 'free' ? 'Sem cobrança' : 'Renova mensalmente'}
+                  </p>
+                </div>
+              </div>
+              {currentPlan !== 'premium' && (
+                <button className="btn-primary gap-2 text-sm">
+                  <Crown size={14} /> Fazer upgrade
+                </button>
+              )}
+            </motion.div>
+          )
+        })()}
 
         {/* Plans */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -137,11 +157,11 @@ export default function AssinaturaPage() {
                 </div>
 
                 <button
-                  disabled={plan.current}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${plan.current ? 'bg-muted text-muted-foreground cursor-default' : 'text-white'}`}
-                  style={!plan.current ? { background: plan.color, boxShadow: `0 4px 16px ${plan.color}35` } : {}}
+                  disabled={plan.id === currentPlan}
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${plan.id === currentPlan ? 'bg-muted text-muted-foreground cursor-default' : 'text-white'}`}
+                  style={plan.id !== currentPlan ? { background: plan.color, boxShadow: `0 4px 16px ${plan.color}35` } : {}}
                 >
-                  {plan.cta} {!plan.current && <ArrowRight size={14} />}
+                  {plan.id === currentPlan ? 'Plano atual' : <>{plan.cta} <ArrowRight size={14} /></>}
                 </button>
               </motion.div>
             )

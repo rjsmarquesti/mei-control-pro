@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Tag, Pencil, Trash2, Check, X } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { PlanGate } from '@/components/plan/PlanGate'
 import { useAppStore } from '@/store/useAppStore'
 import { useDashboard } from '@/hooks/useDashboard'
 
@@ -83,6 +84,7 @@ export default function CategoriasPage() {
 
   return (
     <DashboardLayout>
+      <PlanGate requiredPlan="basic" featureName="Categorias">
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-bold text-foreground">Categorias</h2>
@@ -131,6 +133,7 @@ export default function CategoriasPage() {
           </motion.div>
         </div>
       </div>
+    </PlanGate>
     </DashboardLayout>
   )
 }

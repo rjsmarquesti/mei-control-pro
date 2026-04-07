@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { motion } from 'framer-motion'
 import { DollarSign, TrendingUp, TrendingDown, Wallet, ArrowUpRight } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { PlanGate } from '@/components/plan/PlanGate'
 import { RevenueExpenseChart } from '@/components/charts/RevenueExpenseChart'
 import { ExpenseCategoryChart } from '@/components/charts/ExpenseCategoryChart'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -23,6 +24,7 @@ export default function FinanceiroPage() {
 
   return (
     <DashboardLayout>
+      <PlanGate requiredPlan="basic" featureName="Financeiro">
       <div className="space-y-6">
         <div>
           <h2 className="text-xl font-bold text-foreground">Financeiro</h2>
@@ -91,6 +93,7 @@ export default function FinanceiroPage() {
           </motion.div>
         )}
       </div>
+    </PlanGate>
     </DashboardLayout>
   )
 }

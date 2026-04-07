@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { BarChart3, Download, TrendingUp, TrendingDown, Wallet, FileText } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { PlanGate } from '@/components/plan/PlanGate'
 import { RevenueExpenseChart } from '@/components/charts/RevenueExpenseChart'
 import { ExpenseCategoryChart } from '@/components/charts/ExpenseCategoryChart'
 import { useDashboard } from '@/hooks/useDashboard'
@@ -21,6 +22,7 @@ export default function RelatoriosPage() {
 
   return (
     <DashboardLayout>
+      <PlanGate requiredPlan="pro" featureName="Relatórios">
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -99,6 +101,7 @@ export default function RelatoriosPage() {
           </div>
         </motion.div>
       </div>
+    </PlanGate>
     </DashboardLayout>
   )
 }

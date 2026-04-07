@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic'
 import { motion } from 'framer-motion'
 import { FileText, Download, CheckCircle2, AlertCircle, Info, ExternalLink } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { PlanGate } from '@/components/plan/PlanGate'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
@@ -27,6 +28,7 @@ export default function IRPFPage() {
 
   return (
     <DashboardLayout>
+      <PlanGate requiredPlan="premium" featureName="IRPF Anual">
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -119,6 +121,7 @@ export default function IRPFPage() {
           </div>
         </motion.div>
       </div>
+    </PlanGate>
     </DashboardLayout>
   )
 }
