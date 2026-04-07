@@ -52,6 +52,17 @@ export default function LoginPage() {
             city,
             updated_at: new Date().toISOString(),
           })
+
+          // Notificar via n8n (WhatsApp + email)
+          try {
+            await fetch('https://n8n.divulgabr.com.br/webhook/mei-cadastro', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, email, phone, city }),
+            })
+          } catch {
+            // notificação opcional, não bloqueia o cadastro
+          }
         }
         router.push('/dashboard/onboarding')
       }
