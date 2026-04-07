@@ -1,55 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { DashboardMetrics, Transaction, ChartData, CategoryData } from '@/types'
 
-// ── Mock Data (fallback) ─────────────────────────────────────────────────────
-
-const mockMetrics: DashboardMetrics = {
-  monthRevenue: 8200,
-  annualRevenue: 52000,
-  monthExpenses: 2100,
-  netProfit: 6100,
-  meiLimit: 81000,
-  meiUsed: 52000,
-  dasValue: 70.6,
-  dasDueDate: '2025-04-20',
-  monthRevenueGrowth: 12,
-  monthExpensesGrowth: 8,
-  netProfitGrowth: 18,
-}
-
-const mockChartData: ChartData[] = [
-  { month: 'Jan', receita: 3500, despesa: 800, lucro: 2700 },
-  { month: 'Fev', receita: 4200, despesa: 1200, lucro: 3000 },
-  { month: 'Mar', receita: 3800, despesa: 950, lucro: 2850 },
-  { month: 'Abr', receita: 5100, despesa: 1400, lucro: 3700 },
-  { month: 'Mai', receita: 4700, despesa: 1100, lucro: 3600 },
-  { month: 'Jun', receita: 9850, despesa: 2340, lucro: 7510 },
-  { month: 'Jul', receita: 6200, despesa: 1600, lucro: 4600 },
-  { month: 'Ago', receita: 7100, despesa: 1900, lucro: 5200 },
-  { month: 'Set', receita: 6800, despesa: 1750, lucro: 5050 },
-  { month: 'Out', receita: 8500, despesa: 2100, lucro: 6400 },
-  { month: 'Nov', receita: 9200, despesa: 2300, lucro: 6900 },
-  { month: 'Dez', receita: 10500, despesa: 2600, lucro: 7900 },
-]
-
-const mockTransactions: Transaction[] = [
-  { id: '1', date: '2025-04-06', type: 'revenue', description: 'Cliente X — Dev Web', category: 'Serviços', value: 500, status: 'completed' },
-  { id: '2', date: '2025-04-05', type: 'expense', description: 'Plano de Internet', category: 'Infraestrutura', value: 120, status: 'completed' },
-  { id: '3', date: '2025-04-04', type: 'revenue', description: 'Consultoria Serviço Y', category: 'Consultoria', value: 800, status: 'completed' },
-  { id: '4', date: '2025-04-03', type: 'expense', description: 'Materiais de Escritório', category: 'Material', value: 300, status: 'pending' },
-  { id: '5', date: '2025-04-02', type: 'revenue', description: 'Cliente Z — Landing Page', category: 'Serviços', value: 1250, status: 'completed' },
-  { id: '6', date: '2025-04-01', type: 'expense', description: 'Assinatura Adobe CC', category: 'Tecnologia', value: 89, status: 'completed' },
-  { id: '7', date: '2025-03-31', type: 'revenue', description: 'Projeto Alpha — E-commerce', category: 'Projetos', value: 3500, status: 'pending' },
-  { id: '8', date: '2025-03-30', type: 'expense', description: 'Hospedagem VPS', category: 'Tecnologia', value: 45, status: 'completed' },
-]
-
-const mockCategoryData: CategoryData[] = [
-  { name: 'Serviços', value: 45, color: '#7C3AED', amount: 3690 },
-  { name: 'Consultoria', value: 25, color: '#06B6D4', amount: 2050 },
-  { name: 'Projetos', value: 20, color: '#10B981', amount: 1640 },
-  { name: 'Outros', value: 10, color: '#F59E0B', amount: 820 },
-]
-
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getCurrentMonthRange() {
@@ -76,6 +27,31 @@ const CATEGORY_COLORS: Record<string, string> = {
   Tecnologia: '#8B5CF6',
   Outros: '#6B7280',
 }
+
+async function getUserId(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.user?.id ?? null
+}
+
+// ── Empty states ──────────────────────────────────────────────────────────────
+
+const emptyMetrics: DashboardMetrics = {
+  monthRevenue: 0,
+  annualRevenue: 0,
+  monthExpenses: 0,
+  netProfit: 0,
+  meiLimit: 81000,
+  meiUsed: 0,
+  dasValue: 70.6,
+  dasDueDate: '',
+  monthRevenueGrowth: 0,
+  monthExpensesGrowth: 0,
+  netProfitGrowth: 0,
+}
+
+const emptyChartData: ChartData[] = MONTHS.map(month => ({
+  month, receita: 0, despesa: 0, lucro: 0,
+}))
 
 // ── Service ──────────────────────────────────────────────────────────────────
 
@@ -131,13 +107,15 @@ export const financeService = {
         meiLimit: 81000,
         meiUsed: annualRevenue,
         dasValue: das?.value ?? 70.6,
-        dasDueDate: das?.due_date ?? '2025-04-20',
-        monthRevenueGrowth: 12,
-        monthExpensesGrowth: 8,
-        netProfitGrowth: netProfit > 0 ? Math.round((netProfit / monthRevenue) * 100) : 0,
+        dasDueDate: das?.due_date ?? '',
+        monthRevenueGrowth: 0,
+        monthExpensesGrowth: 0,
+        netProfitGrowth: netProfit > 0 && monthRevenue > 0
+          ? Math.round((netProfit / monthRevenue) * 100)
+          : 0,
       }
     } catch {
-      return mockMetrics
+      return emptyMetrics
     }
   },
 
@@ -161,7 +139,7 @@ export const financeService = {
         status: row.status,
       }))
     } catch {
-      return mockTransactions
+      return []
     }
   },
 
@@ -193,7 +171,7 @@ export const financeService = {
         lucro: v.receita - v.despesa,
       }))
     } catch {
-      return mockChartData
+      return emptyChartData
     }
   },
 
@@ -216,7 +194,7 @@ export const financeService = {
       }
 
       const total = Object.values(totals).reduce((s, v) => s + v, 0)
-      if (total === 0) return mockCategoryData
+      if (total === 0) return []
 
       return Object.entries(totals)
         .sort((a, b) => b[1] - a[1])
@@ -227,51 +205,47 @@ export const financeService = {
           color: CATEGORY_COLORS[name] ?? '#6B7280',
         }))
     } catch {
-      return mockCategoryData
+      return []
     }
   },
 
   async createRevenue(payload: Partial<Transaction>): Promise<Transaction> {
-    try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert([{
-          type: 'revenue',
-          description: payload.description,
-          category: payload.category ?? 'Serviços',
-          value: payload.value,
-          date: payload.date ?? new Date().toISOString().split('T')[0],
-          status: payload.status ?? 'completed',
-        }])
-        .select()
-        .single()
+    const userId = await getUserId()
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([{
+        user_id: userId,
+        type: 'revenue',
+        description: payload.description,
+        category: payload.category ?? 'Serviços',
+        value: payload.value,
+        date: payload.date ?? new Date().toISOString().split('T')[0],
+        status: payload.status ?? 'completed',
+      }])
+      .select()
+      .single()
 
-      if (error) throw error
-      return { ...data, id: String(data.id) }
-    } catch {
-      return { ...mockTransactions[0], ...payload, id: Date.now().toString() } as Transaction
-    }
+    if (error) throw error
+    return { ...data, id: String(data.id) }
   },
 
   async createExpense(payload: Partial<Transaction>): Promise<Transaction> {
-    try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert([{
-          type: 'expense',
-          description: payload.description,
-          category: payload.category ?? 'Outros',
-          value: payload.value,
-          date: payload.date ?? new Date().toISOString().split('T')[0],
-          status: payload.status ?? 'completed',
-        }])
-        .select()
-        .single()
+    const userId = await getUserId()
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([{
+        user_id: userId,
+        type: 'expense',
+        description: payload.description,
+        category: payload.category ?? 'Outros',
+        value: payload.value,
+        date: payload.date ?? new Date().toISOString().split('T')[0],
+        status: payload.status ?? 'completed',
+      }])
+      .select()
+      .single()
 
-      if (error) throw error
-      return { ...data, id: String(data.id) }
-    } catch {
-      return { ...mockTransactions[1], ...payload, id: Date.now().toString() } as Transaction
-    }
+    if (error) throw error
+    return { ...data, id: String(data.id) }
   },
 }

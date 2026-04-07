@@ -16,7 +16,6 @@ export function useDashboard() {
     setChartData,
     setCategoryData,
     setLoading,
-    setUser,
   } = useAppStore()
 
   useEffect(() => {
@@ -35,13 +34,6 @@ export function useDashboard() {
         setTransactions(transactionsData)
         setChartData(chartDataResult)
         setCategoryData(categoryDataResult)
-        setUser({
-          id: '1',
-          name: 'Rogério',
-          email: 'rogerio@meicontrolpro.com',
-          company: 'Rogério Dev ME',
-          meiSince: '2023',
-        })
       } finally {
         setLoading(false)
       }
