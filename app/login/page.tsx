@@ -61,6 +61,16 @@ export default function LoginPage() {
             updated_at: new Date().toISOString(),
           })
 
+          // Capturar como lead
+          await supabase.from('leads').insert({
+            name,
+            email,
+            phone,
+            city,
+            status: 'novo',
+            notes: 'Cadastro gratuito via app',
+          })
+
           // Notificar via n8n (WhatsApp + email)
           try {
             await fetch('https://n8n.divulgabr.com.br/webhook/mei-cadastro', {
