@@ -252,6 +252,17 @@ export default function LoginPage() {
                 ? <><Loader2 size={16} className="animate-spin" /> Aguarde...</>
                 : mode === 'login' ? 'Entrar' : 'Criar conta'}
             </button>
+
+            {mode === 'login' && (
+              <div className="text-center">
+                <a
+                  href="/recuperar-senha"
+                  className="text-sm text-muted-foreground hover:opacity-80 transition-opacity"
+                >
+                  Esqueci minha senha
+                </a>
+              </div>
+            )}
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
