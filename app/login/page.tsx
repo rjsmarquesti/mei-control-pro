@@ -32,9 +32,17 @@ export default function LoginPage() {
 
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        router.push('/dashboard')
+
+        // Redirect admin users to admin panel
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user!.id)
+          .single()
+
+        router.push(profile?.role === 'admin' ? '/admin' : '/dashboard')
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
