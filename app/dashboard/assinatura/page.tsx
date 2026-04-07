@@ -85,8 +85,8 @@ export default function AssinaturaPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className={`glass-card p-6 flex flex-col relative ${plan.popular ? 'ring-2' : ''}`}
-                style={plan.popular ? { ringColor: plan.color } : {}}
+                className="glass-card p-6 flex flex-col relative"
+                style={plan.popular ? { boxShadow: `0 0 0 2px ${plan.color}` } : {}}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[11px] font-bold text-white"
