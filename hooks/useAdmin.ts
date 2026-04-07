@@ -15,16 +15,25 @@ export function useAdmin() {
         router.push('/login')
         return
       }
-      const { data } = await supabase
+
+      const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', session.user.id)
         .single()
 
+      if (error) {
+        // Network or table error — don't redirect, show error state
+        console.error('[useAdmin] erro ao verificar role:', error.message)
+        setLoading(false)
+        return
+      }
+
       if (data?.role !== 'admin') {
         router.push('/dashboard')
         return
       }
+
       setIsAdmin(true)
       setLoading(false)
     })
