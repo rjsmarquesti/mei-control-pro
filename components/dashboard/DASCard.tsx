@@ -18,11 +18,12 @@ export function DASCard({ value, dueDate, isLoading }: DASCardProps) {
   const [isPaying, setIsPaying] = useState(false)
   const [isPaid, setIsPaid] = useState(false)
 
-  const dueDateObj = new Date(dueDate + 'T00:00:00')
+  const hasDueDate = !!dueDate
+  const dueDateObj = hasDueDate ? new Date(dueDate + 'T00:00:00') : null
   const today = new Date()
-  const daysUntilDue = Math.ceil((dueDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  const isOverdue = daysUntilDue < 0
-  const isUrgent = daysUntilDue >= 0 && daysUntilDue <= 5
+  const daysUntilDue = dueDateObj ? Math.ceil((dueDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null
+  const isOverdue = daysUntilDue !== null && daysUntilDue < 0
+  const isUrgent = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 5
 
   const handlePay = async () => {
     setIsPaying(true)
@@ -92,7 +93,7 @@ export function DASCard({ value, dueDate, isLoading }: DASCardProps) {
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
             <Calendar size={12} />
-            <span>Vencimento: {formatDate(dueDate)}</span>
+            <span>{hasDueDate ? `Vencimento: ${formatDate(dueDate)}` : 'Sem DAS pendente'}</span>
           </div>
 
           <button
