@@ -1,13 +1,18 @@
-'use client'
+﻿'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Loader2, TrendingUp, Shield, BarChart3, User, Phone, MapPin } from 'lucide-react'
+import { Eye, EyeOff, Loader2, TrendingUp, Shield, BarChart3, User, Phone, MapPin, Sun, Moon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import { useTheme } from 'next-themes'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -36,51 +41,64 @@ export default function LoginPage() {
         if (error) throw error
 
         // Redirect admin users to admin panel
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', authData.user!.id)
-          .single()
+        const res = await fetch('/api/me/role', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: authData.user!.id }),
+        })
+        const { role } = await res.json()
 
-        router.push(profile?.role === 'admin' ? '/admin' : '/dashboard')
+        router.push(role === 'admin' ? '/admin' : '/dashboard')
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { name, phone, city } },
+          options: {
+            data: { name, phone, city },
+            emailRedirectTo: `${window.location.origin}/email-confirmado`,
+          },
         })
         if (error) throw error
 
         if (data.user) {
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            name,
-            email,
-            phone,
-            city,
-            updated_at: new Date().toISOString(),
-          })
+          await fetch('/api/profiles/upsert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: data.user.id, name, email, phone, city }),
+          }).catch(() => {})
 
-          // Capturar como lead
-          await supabase.from('leads').insert({
-            name,
-            email,
-            phone,
-            city,
-            status: 'novo',
-            notes: 'Cadastro gratuito via app',
-          })
+          // Capturar como lead (via API para bypasear RLS)
+          await fetch('/api/leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, phone, city, status: 'novo', notes: 'Cadastro gratuito via app' }),
+          }).catch(() => {})
 
           // Notificar via n8n (WhatsApp + email)
           try {
             await fetch('https://n8n.divulgabr.com.br/webhook/mei-cadastro', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name, email, phone, city }),
+              body: JSON.stringify({
+                name,
+                email,
+                phone,
+                city,
+                instance: 'sismei',
+                numero: '5521980485675',
+                mensagem: `🎉 Bem-vindo(a) ao MEI Control Pro!\n\nOlá, *${name}*! Seu cadastro foi realizado com sucesso.\n\n📧 *E-mail cadastrado:* ${email}\n📱 *Telefone:* ${phone}\n\n⚠️ *Ação necessária:* Para ativar sua conta, confirme seu cadastro clicando no link enviado para o e-mail acima.\n\nApós a confirmação, você terá acesso completo ao sistema para gerenciar suas finanças como MEI.\n\nQualquer dúvida, estamos à disposição! 😊\n\n🔗 https://app.sismeipro.com.br`,
+              }),
             })
           } catch {
             // notificação opcional, não bloqueia o cadastro
           }
+
+          // Disparar sequência de nutrição de leads (fire and forget)
+          fetch('https://n8n.divulgabr.com.br/webhook/mei-nutricao-trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, phone, city }),
+          }).catch(() => {})
         }
         router.push('/dashboard/onboarding')
       }
@@ -95,7 +113,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex relative">
+      {/* Theme toggle */}
+      {mounted && (
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border/60 bg-muted/40 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          <Sun size={14} className="dark:hidden text-amber-500" />
+          <Moon size={14} className="hidden dark:block text-violet-400" />
+          <span>{theme === 'dark' ? 'Escuro' : 'Claro'}</span>
+        </motion.button>
+      )}
+
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #1a0533 0%, #0d1b3e 100%)' }}>
@@ -103,7 +134,7 @@ export default function LoginPage() {
           style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, #7C3AED 0%, transparent 60%), radial-gradient(circle at 80% 20%, #06B6D4 0%, transparent 40%)' }} />
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-violet-600 flex items-center justify-center text-white font-bold text-lg">M</div>
+            <Image src="/logo.svg" alt="MEI Control Pro" width={40} height={40} className="rounded-xl" />
             <span className="text-white font-bold text-xl">MEI Control Pro</span>
           </div>
         </div>
@@ -129,7 +160,8 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-        <p className="relative z-10 text-violet-400 text-sm">© 2025 MEI Control Pro</p>
+        <p className="relative z-10 text-violet-400/60 text-xs">© 2025 MEI Control Pro · CNPJ 50.406.025/0001-68</p>
+        <p className="relative z-10 text-violet-400/40 text-[10px] mt-1">Serviço privado de assessoria · Sem vínculo com o governo</p>
       </div>
 
       {/* Right panel */}
@@ -141,10 +173,14 @@ export default function LoginPage() {
           className="w-full max-w-md py-8"
         >
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-foreground">
+            <div className="flex items-center justify-center lg:justify-start gap-3 mb-5 lg:hidden">
+              <Image src="/logo.svg" alt="MEI Control Pro" width={36} height={36} className="rounded-xl" />
+              <span className="font-bold text-lg text-foreground">MEI Control Pro</span>
+            </div>
+            <h2 className="text-2xl font-bold text-foreground text-center lg:text-left">
               {mode === 'login' ? 'Entrar na conta' : 'Criar conta'}
             </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="text-muted-foreground mt-1 text-sm text-center lg:text-left">
               {mode === 'login' ? 'Bem-vindo de volta!' : 'Comece gratuitamente hoje'}
             </p>
           </div>
