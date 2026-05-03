@@ -33,6 +33,28 @@ async function getUserId(): Promise<string | null> {
   return session?.user?.id ?? null
 }
 
+async function checkFreeMonthlyLimit(userId: string): Promise<void> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('subscription_plan')
+    .eq('id', userId)
+    .single()
+
+  if (!profile || profile.subscription_plan !== 'free') return
+
+  const { start, end } = getCurrentMonthRange()
+  const { count } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('date', start)
+    .lte('date', end)
+
+  if ((count ?? 0) >= 20) {
+    throw new Error('Limite de 20 lançamentos por mês atingido. Faça upgrade para continuar.')
+  }
+}
+
 // ── Empty states ──────────────────────────────────────────────────────────────
 
 const emptyMetrics: DashboardMetrics = {
@@ -211,6 +233,7 @@ export const financeService = {
 
   async createRevenue(payload: Partial<Transaction>): Promise<Transaction> {
     const userId = await getUserId()
+    if (userId) await checkFreeMonthlyLimit(userId)
     const { data, error } = await supabase
       .from('transactions')
       .insert([{
@@ -231,6 +254,7 @@ export const financeService = {
 
   async createExpense(payload: Partial<Transaction>): Promise<Transaction> {
     const userId = await getUserId()
+    if (userId) await checkFreeMonthlyLimit(userId)
     const { data, error } = await supabase
       .from('transactions')
       .insert([{
@@ -247,5 +271,30 @@ export const financeService = {
 
     if (error) throw error
     return { ...data, id: String(data.id) }
+  },
+
+  async updateTransaction(id: string, payload: Partial<Transaction>): Promise<Transaction> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({
+        description: payload.description,
+        category: payload.category,
+        value: payload.value,
+        date: payload.date,
+        status: payload.status,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return { ...data, id: String(data.id) }
+  },
+
+  async deleteTransaction(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
   },
 }

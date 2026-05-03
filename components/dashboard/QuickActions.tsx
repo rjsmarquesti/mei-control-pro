@@ -2,40 +2,31 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Plus,
-  Minus,
-  FileText,
-  Receipt,
-  BarChart3,
-  Tag,
-  Settings,
-  X,
-  Check,
-} from 'lucide-react'
+import { Plus, Minus, FileText, Receipt, BarChart3, Tag, Lock } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
+import { usePlan } from '@/hooks/usePlan'
+import { Modal } from '@/components/ui/Modal'
+import { TransactionForm } from '@/components/forms/TransactionForm'
+import type { Transaction } from '@/types'
+import type { Plan } from '@/lib/plans'
 
 interface QuickAction {
   id: string
   label: string
-  icon: typeof Plus
+  icon: any
   color: string
   bg: string
-  onClick?: () => void
+  requiredPlan: Plan
+  href?: string
+  modal?: 'revenue' | 'expense'
 }
 
 export function QuickActions() {
-  const { brandSettings } = useAppStore()
-  const [activeAction, setActiveAction] = useState<string | null>(null)
-  const [successAction, setSuccessAction] = useState<string | null>(null)
-
-  const handleAction = async (id: string) => {
-    setActiveAction(id)
-    await new Promise((r) => setTimeout(r, 600))
-    setActiveAction(null)
-    setSuccessAction(id)
-    setTimeout(() => setSuccessAction(null), 1500)
-  }
+  const { brandSettings, transactions, setTransactions } = useAppStore()
+  const { hasAccess } = usePlan()
+  const router = useRouter()
+  const [modalType, setModalType] = useState<'revenue' | 'expense' | null>(null)
 
   const actions: QuickAction[] = [
     {
@@ -44,6 +35,8 @@ export function QuickActions() {
       icon: Plus,
       color: '#10B981',
       bg: 'rgba(16, 185, 129, 0.1)',
+      requiredPlan: 'free',
+      modal: 'revenue',
     },
     {
       id: 'expense',
@@ -51,13 +44,8 @@ export function QuickActions() {
       icon: Minus,
       color: '#EF4444',
       bg: 'rgba(239, 68, 68, 0.1)',
-    },
-    {
-      id: 'irpf',
-      label: 'Gerar IRPF',
-      icon: FileText,
-      color: '#F59E0B',
-      bg: 'rgba(245, 158, 11, 0.1)',
+      requiredPlan: 'free',
+      modal: 'expense',
     },
     {
       id: 'das',
@@ -65,6 +53,8 @@ export function QuickActions() {
       icon: Receipt,
       color: brandSettings.primaryColor,
       bg: `color-mix(in srgb, ${brandSettings.primaryColor} 15%, transparent)`,
+      requiredPlan: 'pro',
+      href: '/dashboard/das',
     },
     {
       id: 'reports',
@@ -72,6 +62,17 @@ export function QuickActions() {
       icon: BarChart3,
       color: '#06B6D4',
       bg: 'rgba(6, 182, 212, 0.1)',
+      requiredPlan: 'pro',
+      href: '/dashboard/relatorios',
+    },
+    {
+      id: 'irpf',
+      label: 'Gerar IRPF',
+      icon: FileText,
+      color: '#F59E0B',
+      bg: 'rgba(245, 158, 11, 0.1)',
+      requiredPlan: 'premium',
+      href: '/dashboard/irpf',
     },
     {
       id: 'categories',
@@ -79,61 +80,87 @@ export function QuickActions() {
       icon: Tag,
       color: '#8B5CF6',
       bg: 'rgba(139, 92, 246, 0.1)',
+      requiredPlan: 'basic',
+      href: '/dashboard/categorias',
     },
   ]
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.15 }}
-      className="glass-card p-5"
-    >
-      <h3 className="text-sm font-bold text-foreground mb-4">Ações Rápidas</h3>
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-        {actions.map((action, index) => {
-          const isActive = activeAction === action.id
-          const isSuccess = successAction === action.id
+  const handleClick = (action: QuickAction) => {
+    if (!hasAccess(action.requiredPlan)) {
+      router.push('/dashboard/assinatura')
+      return
+    }
+    if (action.modal) {
+      setModalType(action.modal)
+    } else if (action.href) {
+      router.push(action.href)
+    }
+  }
 
-          return (
-            <motion.button
-              key={action.id}
-              onClick={() => handleAction(action.id)}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.06 }}
-              whileHover={{ y: -3, transition: { duration: 0.15 } }}
-              whileTap={{ scale: 0.92 }}
-              className="flex flex-col items-center gap-2.5 p-3 rounded-xl transition-all duration-200 group"
-              style={{ background: action.bg }}
-            >
-              <div
-                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-200"
-                style={{ background: `${action.color}20` }}
+  const handleTransactionSuccess = (tx: Transaction) => {
+    setTransactions([tx, ...transactions])
+    setModalType(null)
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15 }}
+        className="glass-card p-5"
+      >
+        <h3 className="text-sm font-bold text-foreground mb-4">Ações Rápidas</h3>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {actions.map((action, index) => {
+            const allowed = hasAccess(action.requiredPlan)
+
+            return (
+              <motion.button
+                key={action.id}
+                onClick={() => handleClick(action)}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.06 }}
+                whileHover={{ y: -3, transition: { duration: 0.15 } }}
+                whileTap={{ scale: 0.92 }}
+                className="flex flex-col items-center gap-2.5 p-3 rounded-xl transition-all duration-200 relative"
+                style={{ background: allowed ? action.bg : 'rgba(107,114,128,0.08)' }}
               >
-                <AnimatePresence mode="wait">
-                  {isSuccess ? (
-                    <motion.div key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                      <Check size={18} style={{ color: action.color }} />
-                    </motion.div>
-                  ) : isActive ? (
-                    <motion.div key="loading" animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}>
-                      <Settings size={18} style={{ color: action.color }} />
-                    </motion.div>
+                <div
+                  className="h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-200"
+                  style={{ background: allowed ? `${action.color}20` : 'rgba(107,114,128,0.15)' }}
+                >
+                  {allowed ? (
+                    <action.icon size={18} style={{ color: action.color }} />
                   ) : (
-                    <motion.div key="icon" initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
-                      <action.icon size={18} style={{ color: action.color }} />
-                    </motion.div>
+                    <Lock size={15} className="text-muted-foreground/60" />
                   )}
-                </AnimatePresence>
-              </div>
-              <span className="text-[11px] font-semibold text-foreground text-center leading-tight">
-                {action.label}
-              </span>
-            </motion.button>
-          )
-        })}
-      </div>
-    </motion.div>
+                </div>
+                <span className={`text-[11px] font-semibold text-center leading-tight ${allowed ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                  {action.label}
+                </span>
+              </motion.button>
+            )
+          })}
+        </div>
+      </motion.div>
+
+      {/* Modal Nova Receita / Nova Despesa */}
+      <Modal
+        isOpen={modalType !== null}
+        onClose={() => setModalType(null)}
+        title={modalType === 'revenue' ? 'Nova Receita' : 'Nova Despesa'}
+        size="md"
+      >
+        {modalType && (
+          <TransactionForm
+            type={modalType}
+            onSuccess={handleTransactionSuccess}
+            onCancel={() => setModalType(null)}
+          />
+        )}
+      </Modal>
+    </>
   )
 }

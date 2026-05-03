@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bem-vindo ao MEI Control Pro</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0f0f1a;font-family:'Segoe UI',Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0f0f1a;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0" border="0">
+
+          <!-- HEADER -->
+          <tr>
+            <td align="center" style="background:linear-gradient(135deg,#1a0533 0%,#0d1b3e 100%);border-radius:20px 20px 0 0;padding:40px 32px 32px;">
+
+              <!-- Logo SVG inline -->
+              <div style="margin-bottom:20px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" width="64" height="64" style="display:block;margin:0 auto;">
+                  <defs>
+                    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:#7C3AED"/>
+                      <stop offset="100%" style="stop-color:#4F46E5"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="200" height="200" rx="40" fill="url(#g1)"/>
+                  <rect x="38" y="112" width="22" height="52" rx="6" fill="white" opacity="0.3"/>
+                  <rect x="68" y="88" width="22" height="76" rx="6" fill="white" opacity="0.5"/>
+                  <rect x="98" y="64" width="22" height="100" rx="6" fill="white" opacity="0.75"/>
+                  <rect x="128" y="44" width="22" height="120" rx="6" fill="white"/>
+                  <polyline points="49,108 79,84 109,60 139,40" stroke="#A78BFA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                  <circle cx="139" cy="40" r="6" fill="white"/>
+                  <rect x="38" y="172" width="124" height="3" rx="1.5" fill="white" opacity="0.2"/>
+                </svg>
+              </div>
+
+              <h1 style="margin:0 0 6px;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">MEI Control Pro</h1>
+              <p style="margin:0;font-size:14px;color:#a78bfa;font-weight:500;">Gestão financeira inteligente para MEI</p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="background:#ffffff;padding:40px 32px;">
+
+              <!-- Saudação -->
+              <h2 style="margin:0 0 8px;font-size:22px;color:#1e1b4b;font-weight:700;">Olá, {{name}}! 👋</h2>
+              <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.7;">
+                Seu cadastro foi <strong style="color:#7c3aed;">confirmado com sucesso</strong>. Agora você tem acesso a todas as ferramentas de gestão financeira do MEI Control Pro.
+              </p>
+
+              <!-- Dados do cadastro -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8f7ff;border-radius:12px;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;">Seus dados</p>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding:6px 0;border-bottom:1px solid #ede9fe;">
+                          <span style="font-size:13px;color:#94a3b8;">📧 Email</span>
+                          <span style="font-size:13px;color:#1e1b4b;font-weight:600;float:right;">{{email}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;border-bottom:1px solid #ede9fe;">
+                          <span style="font-size:13px;color:#94a3b8;">📍 Cidade</span>
+                          <span style="font-size:13px;color:#1e1b4b;font-weight:600;float:right;">{{city}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <span style="font-size:13px;color:#94a3b8;">🎯 Plano</span>
+                          <span style="font-size:13px;color:#7c3aed;font-weight:700;float:right;">Gratuito — ativo</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- O que você pode fazer -->
+              <p style="margin:0 0 16px;font-size:14px;font-weight:700;color:#1e1b4b;">O que você pode fazer agora:</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+                <tr>
+                  <td style="padding:8px 0;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width:32px;height:32px;background:#ede9fe;border-radius:8px;text-align:center;vertical-align:middle;">
+                          <span style="font-size:16px;">📊</span>
+                        </td>
+                        <td style="padding-left:12px;">
+                          <p style="margin:0;font-size:14px;color:#1e1b4b;font-weight:600;">Dashboard financeiro</p>
+                          <p style="margin:0;font-size:12px;color:#64748b;">Visão completa das suas finanças em tempo real</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width:32px;height:32px;background:#ede9fe;border-radius:8px;text-align:center;vertical-align:middle;">
+                          <span style="font-size:16px;">💰</span>
+                        </td>
+                        <td style="padding-left:12px;">
+                          <p style="margin:0;font-size:14px;color:#1e1b4b;font-weight:600;">Receitas e despesas</p>
+                          <p style="margin:0;font-size:12px;color:#64748b;">Registre e acompanhe seus lançamentos</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width:32px;height:32px;background:#ede9fe;border-radius:8px;text-align:center;vertical-align:middle;">
+                          <span style="font-size:16px;">📄</span>
+                        </td>
+                        <td style="padding-left:12px;">
+                          <p style="margin:0;font-size:14px;color:#1e1b4b;font-weight:600;">DAS e impostos</p>
+                          <p style="margin:0;font-size:12px;color:#64748b;">Controle seus boletos MEI sem complicação</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+                <tr>
+                  <td align="center">
+                    <a href="https://app.sismeipro.com.br"
+                       style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:12px;font-size:15px;font-weight:700;letter-spacing:0.3px;box-shadow:0 8px 24px rgba(124,58,237,0.35);">
+                      ✨ Acessar minha conta
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Upgrade banner -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:linear-gradient(135deg,#7c3aed18,#4f46e518);border:1px solid #ddd6fe;border-radius:12px;margin-bottom:8px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td>
+                          <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#1e1b4b;">👑 Quer desbloquear tudo?</p>
+                          <p style="margin:0;font-size:12px;color:#64748b;">Relatórios, IRPF automático, DAS e muito mais a partir de R$ 19,90/mês.</p>
+                        </td>
+                        <td style="text-align:right;white-space:nowrap;padding-left:12px;">
+                          <a href="https://app.sismeipro.com.br/dashboard/assinatura"
+                             style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;">
+                            Ver planos
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#1e1b4b;border-radius:0 0 20px 20px;padding:24px 32px;text-align:center;">
+              <p style="margin:0 0 8px;font-size:13px;color:#a78bfa;font-weight:600;">MEI Control Pro · app.sismeipro.com.br</p>
+              <p style="margin:0 0 12px;font-size:11px;color:#6b7280;">Você recebeu este email porque realizou um cadastro em nossa plataforma.</p>
+              <p style="margin:0;font-size:11px;color:#4b5563;">
+                Dúvidas? <a href="mailto:suporte@sismeipro.com.br" style="color:#a78bfa;text-decoration:none;">suporte@sismeipro.com.br</a>
+                &nbsp;·&nbsp;
+                <a href="https://app.sismeipro.com.br" style="color:#a78bfa;text-decoration:none;">sismeipro.com.br</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

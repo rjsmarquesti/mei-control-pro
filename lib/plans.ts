@@ -11,24 +11,25 @@ export interface PlanConfig {
 
 // Hierarquia: free < basic < pro < premium
 const PLAN_LEVEL: Record<Plan, number> = {
-  free: 0,
-  basic: 1,
-  pro: 2,
+  free:    0,
+  basic:   1,
+  pro:     2,
   premium: 3,
 }
 
 // Qual plano mínimo cada rota exige
 export const ROUTE_PLAN: Record<string, Plan> = {
-  '/dashboard': 'free',
-  '/dashboard/receitas': 'free',
-  '/dashboard/despesas': 'free',
-  '/dashboard/perfil': 'free',
-  '/dashboard/assinatura': 'free',
-  '/dashboard/financeiro': 'basic',
-  '/dashboard/categorias': 'basic',
-  '/dashboard/relatorios': 'pro',
-  '/dashboard/das': 'pro',
-  '/dashboard/irpf': 'premium',
+  '/dashboard':             'free',
+  '/dashboard/receitas':    'free',
+  '/dashboard/despesas':    'free',
+  '/dashboard/perfil':      'free',
+  '/dashboard/assinatura':  'free',
+  '/dashboard/financeiro':  'basic',
+  '/dashboard/categorias':  'basic',
+  '/dashboard/relatorios':           'pro',
+  '/dashboard/relatorios-avancados': 'pro',
+  '/dashboard/das':                  'pro',
+  '/dashboard/irpf':        'premium',
 }
 
 export const PLAN_CONFIGS: PlanConfig[] = [
@@ -67,7 +68,9 @@ export const PLAN_CONFIGS: PlanConfig[] = [
 ]
 
 export function hasAccess(userPlan: Plan, requiredPlan: Plan): boolean {
-  return PLAN_LEVEL[userPlan] >= PLAN_LEVEL[requiredPlan]
+  // Unknown plan values (e.g. legacy 'super_premium') get full access
+  const userLevel = PLAN_LEVEL[userPlan] ?? PLAN_LEVEL['premium']
+  return userLevel >= PLAN_LEVEL[requiredPlan]
 }
 
 export function getPlanConfig(plan: Plan): PlanConfig {

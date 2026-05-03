@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, TrendingUp, Plus, BarChart3, User,
   Menu, X, ArrowDownLeft, ArrowUpRight, FileText,
-  Receipt, Tag, CreditCard, ChevronRight,
+  Receipt, Tag, CreditCard, ChevronRight, LineChart,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { cn } from '@/lib/utils'
@@ -26,6 +26,7 @@ const allNav = [
   { href: '/dashboard/receitas', icon: ArrowDownLeft, label: 'Receitas' },
   { href: '/dashboard/despesas', icon: ArrowUpRight, label: 'Despesas' },
   { href: '/dashboard/relatorios', icon: BarChart3, label: 'Relatórios' },
+  { href: '/dashboard/relatorios-avancados', icon: LineChart, label: 'Rel. Avançados' },
   { href: '/dashboard/irpf', icon: FileText, label: 'IRPF Anual' },
   { href: '/dashboard/das', icon: Receipt, label: 'DAS & Impostos' },
   { href: '/dashboard/categorias', icon: Tag, label: 'Categorias' },
@@ -96,7 +97,7 @@ export function MobileNav() {
       </AnimatePresence>
 
       {/* Bottom nav bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-surface/90 backdrop-blur-xl pb-safe">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[60] border-t border-border/60 bg-surface/90 backdrop-blur-xl pb-safe">
         <div className="flex items-center justify-around px-2 py-2">
           {mainNav.map((item) => {
             const active = isActive(item.href)

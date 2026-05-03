@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 80" fill="none">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon background -->
+  <rect width="80" height="80" rx="18" fill="url(#grad1)"/>
+
+  <!-- Chart bars -->
+  <rect x="12" y="44" width="9" height="24" rx="2.5" fill="white" opacity="0.35"/>
+  <rect x="24" y="34" width="9" height="34" rx="2.5" fill="white" opacity="0.55"/>
+  <rect x="36" y="24" width="9" height="44" rx="2.5" fill="white" opacity="0.75"/>
+  <rect x="48" y="16" width="9" height="52" rx="2.5" fill="white"/>
+
+  <!-- Trend line -->
+  <polyline points="16.5,40 28.5,30 40.5,20 52.5,12" stroke="#C4B5FD" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="52.5" cy="12" r="3.5" fill="white"/>
+
+  <!-- Baseline -->
+  <rect x="12" y="70" width="56" height="2" rx="1" fill="white" opacity="0.2"/>
+
+  <!-- Brand name -->
+  <text x="96" y="34" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-size="26" font-weight="800" fill="#1E1B4B" letter-spacing="-0.5">MEI Control</text>
+  <text x="97" y="58" font-family="'Inter', 'Segoe UI', Arial, sans-serif" font-size="14" font-weight="500" fill="#7C3AED" letter-spacing="3">PRO</text>
+</svg>

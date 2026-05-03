@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, Search, Phone, MapPin, Trash2 } from 'lucide-react'
+import { RefreshCw, Search, Phone, MapPin, Trash2, UserPlus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useAdmin } from '@/hooks/useAdmin'
 
@@ -29,7 +30,10 @@ const statusStyle = (s: string) => STATUS_OPTIONS.find(o => o.value === s)?.colo
 const statusLabel = (s: string) => STATUS_OPTIONS.find(o => o.value === s)?.label ?? s
 
 export default function LeadsAdminPage() {
-  const { isAdmin, loading } = useAdmin()
+  const { isAdmin, loading, token } = useAdmin()
+  const router = useRouter()
+  const af = (url: string, init?: RequestInit) =>
+    fetch(url, { ...init, headers: { ...(init?.headers as object), Authorization: `Bearer ${token ?? ''}` } })
   const [leads, setLeads] = useState<Lead[]>([])
   const [filtered, setFiltered] = useState<Lead[]>([])
   const [search, setSearch] = useState('')
@@ -37,11 +41,13 @@ export default function LeadsAdminPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [editNotes, setEditNotes] = useState<{ id: string; notes: string } | null>(null)
+  const [convertingId, setConvertingId] = useState<string | null>(null)
+  const [convertMsg, setConvertMsg] = useState<{ id: string; ok: boolean; msg: string } | null>(null)
 
   useEffect(() => {
-    if (!isAdmin) return
+    if (!isAdmin || !token) return
     loadLeads()
-  }, [isAdmin])
+  }, [isAdmin, token])
 
   useEffect(() => {
     let result = leads
@@ -58,32 +64,72 @@ export default function LeadsAdminPage() {
 
   const loadLeads = async () => {
     setLoadingData(true)
-    const { data } = await supabase
-      .from('leads')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setLeads(data ?? [])
-    setFiltered(data ?? [])
-    setLoadingData(false)
+    try {
+      const res = await af('/api/admin/leads')
+      const data = await res.json()
+      const list = Array.isArray(data) ? data : []
+      setLeads(list)
+      setFiltered(list)
+    } catch (e) {
+      console.error('loadLeads error', e)
+    } finally {
+      setLoadingData(false)
+    }
   }
 
   const updateStatus = async (id: string, status: string) => {
     setActionLoading(id)
-    await supabase.from('leads').update({ status }).eq('id', id)
+    await af('/api/admin/leads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    })
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l))
     setActionLoading(null)
   }
 
   const saveNotes = async () => {
     if (!editNotes) return
-    await supabase.from('leads').update({ notes: editNotes.notes }).eq('id', editNotes.id)
+    await af('/api/admin/leads', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editNotes.id, notes: editNotes.notes }),
+    })
     setLeads(prev => prev.map(l => l.id === editNotes.id ? { ...l, notes: editNotes.notes } : l))
     setEditNotes(null)
   }
 
+  const convertLead = async (l: Lead) => {
+    if (!confirm(`Converter "${l.name}" em usuário? Será enviado um email para ele criar a senha.`)) return
+    setConvertingId(l.id)
+    setConvertMsg(null)
+    try {
+      const res = await af('/api/admin/leads/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: l.id, name: l.name, email: l.email, phone: l.phone, city: l.city }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      // Remove da lista imediatamente
+      setLeads(prev => prev.filter(x => x.id !== l.id))
+      // Redireciona para clientes após breve feedback
+      setConvertMsg({ id: l.id, ok: true, msg: 'Adicionado a clientes!' })
+      setTimeout(() => router.push('/admin/usuarios'), 1200)
+    } catch (err: any) {
+      setConvertMsg({ id: l.id, ok: false, msg: err.message })
+    } finally {
+      setConvertingId(null)
+    }
+  }
+
   const deleteLead = async (id: string) => {
     if (!confirm('Remover este lead?')) return
-    await supabase.from('leads').delete().eq('id', id)
+    await af('/api/admin/leads', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
     setLeads(prev => prev.filter(l => l.id !== id))
   }
 
@@ -195,6 +241,16 @@ export default function LeadsAdminPage() {
                   >
                     Notas
                   </button>
+                  {l.status !== 'convertido' && (
+                    <button
+                      onClick={() => convertLead(l)}
+                      disabled={convertingId === l.id}
+                      title="Converter em usuário"
+                      className="p-1.5 rounded-lg hover:bg-green-500/20 text-green-400 transition-all disabled:opacity-50"
+                    >
+                      {convertingId === l.id ? <RefreshCw size={13} className="animate-spin" /> : <UserPlus size={13} />}
+                    </button>
+                  )}
                   <button
                     onClick={() => deleteLead(l.id)}
                     className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-all"
@@ -202,6 +258,11 @@ export default function LeadsAdminPage() {
                     <Trash2 size={13} />
                   </button>
                 </div>
+                {convertMsg?.id === l.id && (
+                  <p className={`text-[10px] mt-1 ${convertMsg.ok ? 'text-green-400' : 'text-red-400'}`}>
+                    {convertMsg.msg}
+                  </p>
+                )}
               </div>
             </div>
           </motion.div>

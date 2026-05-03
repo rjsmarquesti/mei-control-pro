@@ -14,6 +14,8 @@ interface AppState {
   brandSettings: BrandSettings
   selectedPeriod: Period
 
+  refreshKey: number
+
   setUser: (user: User) => void
   setMetrics: (metrics: DashboardMetrics) => void
   setTransactions: (transactions: Transaction[]) => void
@@ -22,6 +24,7 @@ interface AppState {
   setLoading: (loading: boolean) => void
   setBrandSettings: (settings: Partial<BrandSettings>) => void
   setSelectedPeriod: (period: Period) => void
+  bumpRefresh: () => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -34,6 +37,7 @@ export const useAppStore = create<AppState>()(
       categoryData: [],
       isLoading: false,
       selectedPeriod: 'monthly',
+      refreshKey: 0,
       brandSettings: {
         primaryColor: '#7C3AED',
         companyName: 'MEI Control Pro',
@@ -52,6 +56,7 @@ export const useAppStore = create<AppState>()(
           brandSettings: { ...state.brandSettings, ...settings },
         })),
       setSelectedPeriod: (selectedPeriod) => set({ selectedPeriod }),
+      bumpRefresh: () => set((state) => ({ refreshKey: state.refreshKey + 1 })),
     }),
     {
       name: 'mei-app-storage',

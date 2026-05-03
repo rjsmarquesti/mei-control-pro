@@ -1,4 +1,4 @@
-# MEI Control Pro — Manual do Usuário
+﻿# MEI Control Pro — Manual do Usuário
 
 **Versão 1.0 | 2025**
 
@@ -13,7 +13,7 @@ O MEI Control Pro é um sistema de gestão financeira desenvolvido exclusivament
 ## Acessando o sistema
 
 ### Endereço
-Acesse pelo navegador: **https://app.sismei.com.br**
+Acesse pelo navegador: **https://app.sismeipro.com.br**
 
 ### Primeiro acesso
 1. Na tela de login, clique em **"Criar conta grátis"**
@@ -22,7 +22,7 @@ Acesse pelo navegador: **https://app.sismei.com.br**
 4. Você será redirecionado automaticamente para o Dashboard
 
 ### Entrar na conta
-1. Acesse **https://app.sismei.com.br**
+1. Acesse **https://app.sismeipro.com.br**
 2. Informe seu **e-mail** e **senha**
 3. Clique em **Entrar**
 
@@ -336,9 +336,9 @@ Na tela de login, clique em **"Esqueci minha senha"** e siga as instruções env
 
 Encontrou algum problema ou tem dúvidas?
 
-- 📧 **Email:** suporte@sismei.com.br
+- 📧 **Email:** suporte@sismeipro.com.br
 - 💬 **WhatsApp:** (11) 99999-0000
-- 🌐 **Site:** https://sismei.com.br
+- 🌐 **Site:** https://sismeipro.com.br
 
 ---
 

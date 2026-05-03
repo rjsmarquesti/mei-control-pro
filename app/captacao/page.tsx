@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -208,8 +208,20 @@ export default function CaptacaoPage() {
         </div>
       </div>
 
-      <footer className="text-center py-6 text-violet-500 text-xs relative z-10">
-        © 2025 MEI Control Pro · Todos os direitos reservados
+      <footer className="text-center py-8 px-4 text-xs relative z-10 border-t border-white/5 mt-4">
+        <p className="text-slate-500 mb-2">
+          Este é um serviço privado de assessoria para MEI e <strong className="text-slate-400">não possui vínculo com o governo federal</strong>, Receita Federal ou qualquer órgão público.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3 text-slate-600 mb-2">
+          <a href="/termos" className="hover:text-violet-400 transition-colors">Termos de Uso</a>
+          <span>·</span>
+          <a href="/privacidade" className="hover:text-violet-400 transition-colors">Política de Privacidade</a>
+          <span>·</span>
+          <a href="mailto:suporte@sismeipro.com.br" className="hover:text-violet-400 transition-colors">suporte@sismeipro.com.br</a>
+        </div>
+        <p className="text-slate-700">
+          © 2025 MEI Control Pro · CNPJ 50.406.025/0001-68 · Todos os direitos reservados
+        </p>
       </footer>
     </div>
   )

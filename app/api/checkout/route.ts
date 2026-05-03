@@ -1,21 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { MercadoPagoConfig, Preference } from 'mercadopago'
-import { createClient } from '@supabase/supabase-js'
+import { getUserFromRequest } from '@/lib/supabase-server'
 
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN ?? ''
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.sismei.com.br'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.sismeipro.com.br'
 
 const PLAN_PRICES: Record<string, { title: string; price: number; months: number }> = {
-  basic:   { title: 'MEI Control Pro — Plano Basic',   price: 19.90, months: 1 },
-  pro:     { title: 'MEI Control Pro — Plano Pro',     price: 39.90, months: 1 },
-  premium: { title: 'MEI Control Pro — Plano Premium', price: 59.90, months: 1 },
+  basic:          { title: 'MEI Control Pro — Plano Basic',          price: 19.90,  months: 1  },
+  pro:            { title: 'MEI Control Pro — Plano Pro',            price: 39.90,  months: 1  },
+  premium:        { title: 'MEI Control Pro — Plano Premium',        price: 59.90,  months: 1  },
+  basic_annual:   { title: 'MEI Control Pro — Plano Basic Anual (20% OFF)',   price: 191.04, months: 12 },
+  pro_annual:     { title: 'MEI Control Pro — Plano Pro Anual (20% OFF)',     price: 382.56, months: 12 },
+  premium_annual: { title: 'MEI Control Pro — Plano Premium Anual (20% OFF)', price: 574.08, months: 12 },
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan, userId, userEmail } = await req.json()
+    const authenticatedId = await getUserFromRequest(req)
+    if (!authenticatedId) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const { plan, userEmail } = await req.json()
+    const userId = authenticatedId
 
     if (!MP_TOKEN) {
       return NextResponse.json({ error: 'Mercado Pago não configurado' }, { status: 500 })

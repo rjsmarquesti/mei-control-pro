@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ArrowDownLeft, ArrowUpRight, ExternalLink } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, ExternalLink, Pencil, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { SkeletonTable } from '@/components/ui/SkeletonCard'
 import { formatCurrency, formatShortDate } from '@/lib/utils'
@@ -11,6 +11,8 @@ import type { Transaction } from '@/types'
 interface TransactionsTableProps {
   transactions: Transaction[]
   isLoading?: boolean
+  onEdit?: (tx: Transaction) => void
+  onDelete?: (tx: Transaction) => void
 }
 
 const statusLabels: Record<Transaction['status'], string> = {
@@ -29,7 +31,7 @@ const categoryColors: Record<string, string> = {
   'Outros': '#6B7280',
 }
 
-export function TransactionsTable({ transactions, isLoading }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, isLoading, onEdit, onDelete }: TransactionsTableProps) {
   const { brandSettings } = useAppStore()
 
   if (isLoading) return <SkeletonTable />
@@ -60,7 +62,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
         <table className="w-full">
           <thead>
             <tr className="border-b border-border/60">
-              {['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor', 'Status'].map((h) => (
+              {['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor', 'Status', ''].map((h) => (
                 <th key={h} className="pb-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider first:pl-0 last:text-right pr-4 last:pr-0">
                   {h}
                 </th>
@@ -111,6 +113,20 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                 <td className="py-3.5 text-right">
                   <Badge variant={tx.status}>{statusLabels[tx.status]}</Badge>
                 </td>
+                <td className="py-3.5 pl-3">
+                  <div className="flex items-center gap-1 justify-end">
+                    {onEdit && (
+                      <button onClick={() => onEdit(tx)} className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground">
+                        <Pencil size={13} />
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button onClick={() => onDelete(tx)} className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </td>
               </motion.tr>
             ))}
           </tbody>
@@ -146,6 +162,18 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                 {tx.type === 'revenue' ? '+' : '-'}{formatCurrency(tx.value)}
               </p>
               <Badge variant={tx.status} className="mt-0.5">{statusLabels[tx.status]}</Badge>
+              <div className="flex items-center gap-1 justify-end mt-1.5">
+                {onEdit && (
+                  <button onClick={() => onEdit(tx)} className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-muted/60 transition-colors text-muted-foreground">
+                    <Pencil size={11} />
+                  </button>
+                )}
+                {onDelete && (
+                  <button onClick={() => onDelete(tx)} className="h-6 w-6 rounded-md flex items-center justify-center hover:bg-red-500/10 transition-colors text-muted-foreground hover:text-red-400">
+                    <Trash2 size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         ))}

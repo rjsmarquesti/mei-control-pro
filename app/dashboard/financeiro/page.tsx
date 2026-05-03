@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { DollarSign, TrendingUp, TrendingDown, Wallet, ArrowUpRight } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PlanGate } from '@/components/plan/PlanGate'
+import { PrintButton } from '@/components/ui/PrintButton'
 import { RevenueExpenseChart } from '@/components/charts/RevenueExpenseChart'
 import { ExpenseCategoryChart } from '@/components/charts/ExpenseCategoryChart'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -26,9 +27,12 @@ export default function FinanceiroPage() {
     <DashboardLayout>
       <PlanGate requiredPlan="basic" featureName="Financeiro">
       <div className="space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Financeiro</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Visão completa da sua saúde financeira</p>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Financeiro</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Visão completa da sua saúde financeira</p>
+          </div>
+          <PrintButton />
         </div>
 
         {/* Metrics */}
@@ -49,7 +53,7 @@ export default function FinanceiroPage() {
                   <Icon size={16} style={{ color }} />
                 </div>
               </div>
-              <p className="text-2xl font-bold" style={{ color }}>{formatCurrency(value)}</p>
+              <p className="text-lg sm:text-xl font-bold truncate" style={{ color }}>{formatCurrency(value)}</p>
             </motion.div>
           ))}
         </div>

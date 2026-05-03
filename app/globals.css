@@ -68,7 +68,7 @@
 
 @layer components {
   .glass-card {
-    @apply rounded-2xl border border-white/10 backdrop-blur-md;
+    @apply rounded-2xl border border-white/10 backdrop-blur-md overflow-hidden;
     background: hsl(var(--surface) / 0.8);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
@@ -212,5 +212,40 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@media print {
+  .no-print,
+  nav, aside, header,
+  [class*="sidebar"],
+  [class*="MobileNav"],
+  [class*="Header"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12px;
+  }
+
+  .glass-card, .glass-card-elevated {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    page-break-inside: avoid;
+  }
+
+  .print-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  @page {
+    margin: 1.5cm;
+    size: A4;
   }
 }

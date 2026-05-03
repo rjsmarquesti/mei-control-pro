@@ -12,8 +12,17 @@ export function formatCurrency(value: number): string {
   }).format(Math.abs(value))
 }
 
+function parseDate(dateString: string): Date {
+  if (dateString.length <= 10) return new Date(dateString + 'T00:00:00')
+  // Normalize PostgreSQL timestamptz: "2026-04-27 20:16:02.687+00" → "2026-04-27T20:16:02.687+00:00"
+  const iso = dateString
+    .replace(' ', 'T')
+    .replace(/([+-]\d{2})$/, '$1:00')
+  return new Date(iso)
+}
+
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString + 'T00:00:00')
+  const date = parseDate(dateString)
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -22,7 +31,7 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatShortDate(dateString: string): string {
-  const date = new Date(dateString + 'T00:00:00')
+  const date = parseDate(dateString)
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',

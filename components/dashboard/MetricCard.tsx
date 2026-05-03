@@ -64,8 +64,8 @@ export function MetricCard({
         )}
       </div>
 
-      <p className="text-xs font-medium text-muted-foreground mb-1">{title}</p>
-      <p className="text-2xl font-bold text-foreground tracking-tight">
+      <p className="text-xs font-medium text-muted-foreground mb-1 truncate">{title}</p>
+      <p className="text-lg sm:text-xl xl:text-2xl font-bold text-foreground tracking-tight truncate">
         {formatCurrency(value)}
       </p>
       {description && (

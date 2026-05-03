@@ -2,22 +2,48 @@
 
 export const dynamic = 'force-dynamic'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FileText, Download, CheckCircle2, AlertCircle, Info, ExternalLink } from 'lucide-react'
+import { PrintButton } from '@/components/ui/PrintButton'
+import { PrintSection } from '@/components/ui/PrintSection'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PlanGate } from '@/components/plan/PlanGate'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+
+interface Profile { name?: string; email?: string; cnpj?: string; city?: string }
 
 export default function IRPFPage() {
   const { metrics, chartData } = useDashboard()
   const { brandSettings } = useAppStore()
+  const [annualDasPaid, setAnnualDasPaid] = useState<number | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const year = new Date().getFullYear()
+      const [{ data: das }, { data: prof }] = await Promise.all([
+        supabase.from('das_payments').select('value').eq('status', 'paid')
+          .gte('paid_at', `${year}-01-01`).lte('paid_at', `${year}-12-31T23:59:59`),
+        supabase.from('profiles').select('name,email,cnpj,city').eq('id', session.user.id).single(),
+      ])
+      if (das) setAnnualDasPaid(das.reduce((s, r) => s + (r.value ?? 0), 0))
+      if (prof) setProfile(prof)
+    }
+    load()
+  }, [])
 
   const annualRevenue = metrics?.annualRevenue ?? chartData.reduce((s, d) => s + d.receita, 0)
   const annualExpenses = chartData.reduce((s, d) => s + d.despesa, 0)
   const annualProfit = annualRevenue - annualExpenses
   const isExempt = annualRevenue <= 81000
+  const dasLabel = annualDasPaid === null ? 'DAS Pago no Ano (carregando...)' : 'DAS Pago no Ano'
+  const dasDisplayValue = annualDasPaid ?? 0
 
   const irpfData = [
     { label: 'Receita bruta anual', value: formatCurrency(annualRevenue) },
@@ -29,8 +55,9 @@ export default function IRPFPage() {
   return (
     <DashboardLayout>
       <PlanGate requiredPlan="premium" featureName="IRPF Anual">
+      <PrintSection id="irpf-print" title={`Relatório IRPF — ${new Date().getFullYear()}`} profile={profile}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center justify-between flex-wrap gap-3 no-print">
           <div>
             <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
               IRPF Anual
@@ -38,9 +65,12 @@ export default function IRPFPage() {
             </h2>
             <p className="text-sm text-muted-foreground mt-0.5">Dados para declaração do Imposto de Renda</p>
           </div>
-          <a href="https://www.gov.br/receitafederal/pt-br/assuntos/meu-imposto-de-renda" target="_blank" rel="noopener noreferrer" className="btn-outline gap-2 text-xs">
-            <ExternalLink size={14} /> Receita Federal
-          </a>
+          <div className="flex gap-2">
+            <PrintButton label="Exportar PDF" />
+            <a href="https://www.gov.br/receitafederal/pt-br/assuntos/meu-imposto-de-renda" target="_blank" rel="noopener noreferrer" className="btn-outline gap-2 text-xs">
+              <ExternalLink size={14} /> Receita Federal
+            </a>
+          </div>
         </div>
 
         {/* Status banner */}
@@ -67,7 +97,7 @@ export default function IRPFPage() {
             { label: 'Receita Bruta', value: annualRevenue, color: '#10B981' },
             { label: 'Despesas', value: annualExpenses, color: '#EF4444' },
             { label: 'Resultado', value: annualProfit, color: '#7C3AED' },
-            { label: 'DAS Pago (estimado)', value: 70.6 * 12, color: '#06B6D4' },
+            { label: dasLabel, value: dasDisplayValue, color: '#06B6D4' },
           ].map(({ label, value, color }, i) => (
             <motion.div key={label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className="glass-card p-5">
               <p className="text-xs text-muted-foreground mb-2">{label}</p>
@@ -88,14 +118,29 @@ export default function IRPFPage() {
             ))}
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            <button className="btn-primary gap-2">
+          <div className="mt-5 flex flex-wrap gap-3 no-print">
+            <button
+              onClick={() => window.print()}
+              disabled={annualRevenue === 0}
+              title={annualRevenue === 0 ? 'Nenhuma receita lançada para gerar o relatório' : ''}
+              className="btn-primary gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <Download size={15} /> Gerar Relatório IRPF
             </button>
-            <button className="btn-outline gap-2">
+            <a
+              href="https://www.gov.br/receitafederal/pt-br/assuntos/meu-imposto-de-renda"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-outline gap-2"
+            >
               <FileText size={15} /> Ver Instruções
-            </button>
+            </a>
           </div>
+          {annualRevenue === 0 && (
+            <p className="text-xs text-amber-400 mt-3 flex items-center gap-1.5 no-print">
+              <AlertCircle size={13} /> Lance suas receitas para gerar o relatório IRPF.
+            </p>
+          )}
         </motion.div>
 
         {/* Tips */}
@@ -121,6 +166,7 @@ export default function IRPFPage() {
           </div>
         </motion.div>
       </div>
+      </PrintSection>
     </PlanGate>
     </DashboardLayout>
   )

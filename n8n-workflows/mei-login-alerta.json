@@ -1,0 +1,107 @@
+{
+  "name": "mei-login-alerta",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mei-login-alerta",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-login",
+      "name": "Webhook Login Alerta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst nome = body.nome ?? 'usuário';\nconst phoneWA = body.phoneWA ?? '';\nconst data = body.data ?? new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });\nconst hora = body.hora ?? new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });\nconst appUrl = body.appUrl ?? 'https://app.sismeipro.com.br';\n\nconst mensagem = `🔐 *Novo acesso detectado*\\n\\nOlá, *${nome}*!\\n\\nSua conta MEI Control Pro foi acessada agora.\\n\\n📅 ${data} às ${hora}\\n\\nSe não foi você, redefina sua senha imediatamente:\\n🔗 ${appUrl}/recuperar-senha`;\n\nreturn [{ json: { phoneWA, mensagem, instance: 'sismei' } }];"
+      },
+      "id": "formatar-mensagem",
+      "name": "Formatar Mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "has-phone",
+              "leftValue": "={{ $json.phoneWA }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-tem-phone",
+      "name": "Tem WhatsApp?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.divulgabr.com.br/message/sendText/sismei",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "number", "value": "={{ $json.phoneWA }}" },
+            { "name": "text", "value": "={{ $json.mensagem }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "enviar-whatsapp",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 220],
+      "credentials": {
+        "httpHeaderAuth": { "id": "evolution-api-key", "name": "Evolution API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }"
+      },
+      "id": "respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 420]
+    }
+  ],
+  "connections": {
+    "Webhook Login Alerta": {
+      "main": [[{ "node": "Formatar Mensagem", "type": "main", "index": 0 }]]
+    },
+    "Formatar Mensagem": {
+      "main": [[{ "node": "Tem WhatsApp?", "type": "main", "index": 0 }]]
+    },
+    "Tem WhatsApp?": {
+      "main": [
+        [{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }],
+        [{ "node": "Respond OK", "type": "main", "index": 0 }]
+      ]
+    },
+    "Enviar WhatsApp": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "sismei" }],
+  "triggerCount": 1,
+  "active": true
+}

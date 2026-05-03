@@ -2,23 +2,38 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, TrendingDown, ArrowUpRight, Search } from 'lucide-react'
+import { Plus, TrendingDown, ArrowUpRight, Search, Printer } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { TransactionsTable } from '@/components/dashboard/TransactionsTable'
 import { Modal } from '@/components/ui/Modal'
 import { TransactionForm } from '@/components/forms/TransactionForm'
+import { PrintSection } from '@/components/ui/PrintSection'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
+import { financeService } from '@/services/finance'
+import { supabase } from '@/lib/supabase'
 import type { Transaction } from '@/types'
+
+interface Profile { name?: string; email?: string; cnpj?: string; city?: string }
 
 export default function DespesasPage() {
   const { transactions, isLoading } = useDashboard()
-  const { setTransactions } = useAppStore()
+  const { setTransactions, setMetrics, bumpRefresh } = useAppStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const [search, setSearch] = useState('')
+  const [profile, setProfile] = useState<Profile | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      supabase.from('profiles').select('name,email,cnpj,city').eq('id', session.user.id).single()
+        .then(({ data }) => { if (data) setProfile(data) })
+    })
+  }, [])
 
   const expenses = transactions.filter((t) => t.type === 'expense')
   const filtered = expenses.filter((t) =>
@@ -31,24 +46,47 @@ export default function DespesasPage() {
   const pending = expenses.filter((t) => t.status === 'pending').reduce((s, t) => s + t.value, 0)
 
   const handleSuccess = (tx: Transaction) => {
-    setTransactions([tx, ...transactions])
-    setIsModalOpen(false)
+    if (editingTx) {
+      setTransactions(transactions.map((t) => t.id === tx.id ? tx : t))
+      setEditingTx(null)
+    } else {
+      setTransactions([tx, ...transactions])
+      setIsModalOpen(false)
+    }
+    financeService.getDashboard().then(setMetrics)
+    bumpRefresh()
+  }
+
+  const handleDelete = async (tx: Transaction) => {
+    if (!confirm(`Excluir "${tx.description}" (${formatCurrency(tx.value)})?`)) return
+    try {
+      await financeService.deleteTransaction(tx.id)
+      setTransactions(transactions.filter((t) => t.id !== tx.id))
+      bumpRefresh()
+    } catch {
+      alert('Erro ao excluir. Tente novamente.')
+    }
   }
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center justify-between flex-wrap gap-3 no-print">
           <div>
             <h2 className="text-xl font-bold text-foreground">Despesas</h2>
             <p className="text-sm text-muted-foreground mt-0.5">{expenses.length} lançamentos encontrados</p>
           </div>
-          <button onClick={() => setIsModalOpen(true)} className="btn-primary" style={{ background: '#EF4444' }}>
-            <Plus size={16} /> Nova Despesa
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => window.print()} className="btn-outline gap-2 text-sm">
+              <Printer size={15} /> Imprimir Extrato
+            </button>
+            <button onClick={() => setIsModalOpen(true)} className="btn-primary" style={{ background: '#EF4444' }}>
+              <Plus size={16} /> Nova Despesa
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 no-print">
           {[
             { label: 'Total Despesas', value: total, color: '#EF4444', icon: TrendingDown },
             { label: 'Pago', value: completed, color: '#6B7280', icon: ArrowUpRight },
@@ -61,20 +99,38 @@ export default function DespesasPage() {
                   <Icon size={16} style={{ color }} />
                 </div>
               </div>
-              <p className="text-xl font-bold" style={{ color }}>{formatCurrency(value)}</p>
+              <p className="text-lg font-bold truncate" style={{ color }}>{formatCurrency(value)}</p>
             </motion.div>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-surface">
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-surface no-print">
           <Search size={15} className="text-muted-foreground shrink-0" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar despesas..." className="flex-1 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground" />
         </div>
 
-        <TransactionsTable transactions={filtered} isLoading={isLoading} />
+        <PrintSection id="despesas-print" title="Extrato de Despesas" profile={profile}>
+          <TransactionsTable
+            transactions={filtered}
+            isLoading={isLoading}
+            onEdit={(tx) => setEditingTx(tx)}
+            onDelete={handleDelete}
+          />
+        </PrintSection>
 
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nova Despesa">
           <TransactionForm type="expense" onSuccess={handleSuccess} onCancel={() => setIsModalOpen(false)} />
+        </Modal>
+
+        <Modal isOpen={!!editingTx} onClose={() => setEditingTx(null)} title="Editar Despesa">
+          {editingTx && (
+            <TransactionForm
+              type="expense"
+              initialData={editingTx}
+              onSuccess={handleSuccess}
+              onCancel={() => setEditingTx(null)}
+            />
+          )}
         </Modal>
       </div>
     </DashboardLayout>

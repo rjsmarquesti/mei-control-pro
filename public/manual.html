@@ -1,0 +1,1356 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual do Usuário — MEI Control Pro</title>
+  <meta name="description" content="Manual completo do MEI Control Pro — aprenda a usar todas as funcionalidades da plataforma." />
+  <style>
+    :root {
+      --bg: #0a0a14;
+      --surface: #12121f;
+      --surface-elevated: #1a1a2e;
+      --border: rgba(255,255,255,0.08);
+      --primary: #7C3AED;
+      --primary-light: #9d5ffc;
+      --cyan: #06B6D4;
+      --green: #10B981;
+      --amber: #F59E0B;
+      --red: #EF4444;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --sidebar-w: 280px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transition: transform .3s ease;
+    }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-track { background: transparent; }
+    #sidebar::-webkit-scrollbar-thumb { background: rgba(124,58,237,.4); border-radius: 4px; }
+
+    .sidebar-logo {
+      display: flex; align-items: center; gap: 12px;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #7C3AED, #06B6D4);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: #fff;
+      flex-shrink: 0;
+    }
+    .sidebar-logo-text p:first-child { font-weight: 700; font-size: 14px; color: #fff; }
+    .sidebar-logo-text p:last-child { font-size: 10px; color: #818cf8; }
+
+    .sidebar-search {
+      margin: 12px 12px 8px;
+      position: relative;
+    }
+    .sidebar-search input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px 7px 32px;
+      font-size: 12px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .sidebar-search input:focus { border-color: var(--primary); }
+    .sidebar-search input::placeholder { color: var(--muted); }
+    .sidebar-search svg {
+      position: absolute; left: 9px; top: 50%;
+      transform: translateY(-50%);
+      width: 14px; height: 14px; stroke: var(--muted);
+    }
+
+    .sidebar-section {
+      padding: 6px 12px 2px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #4f5f8a;
+      margin-top: 6px;
+    }
+    .sidebar-nav { padding: 0 8px; flex: 1; }
+    .sidebar-nav a {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #a5b4d8;
+      text-decoration: none;
+      transition: all .15s;
+      margin-bottom: 1px;
+    }
+    .sidebar-nav a:hover, .sidebar-nav a.active {
+      background: rgba(124,58,237,.15);
+      color: #c4b5fd;
+    }
+    .sidebar-nav a .num {
+      margin-left: auto;
+      font-size: 10px;
+      background: rgba(124,58,237,.2);
+      color: #a78bfa;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .sidebar-footer a { color: var(--primary-light); text-decoration: none; }
+
+    /* ── Top bar mobile ── */
+    #topbar {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 56px;
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      z-index: 200;
+    }
+    #topbar h1 { font-size: 15px; font-weight: 700; color: #fff; flex: 1; }
+    #menu-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 6px; color: var(--text);
+    }
+    #menu-btn svg { width: 22px; height: 22px; stroke: currentColor; }
+
+    /* ── Main content ── */
+    #main {
+      margin-left: var(--sidebar-w);
+      min-height: 100vh;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0f0720 0%, #0d1b3e 50%, #0a0a14 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 60px 56px 50px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(124,58,237,.15) 0%, transparent 70%);
+      top: -200px; right: -100px;
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(124,58,237,.15);
+      border: 1px solid rgba(124,58,237,.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #c4b5fd;
+      margin-bottom: 18px;
+    }
+    .hero h1 {
+      font-size: 40px; font-weight: 800;
+      background: linear-gradient(135deg, #fff 30%, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1.2; margin-bottom: 14px;
+    }
+    .hero p {
+      font-size: 16px; color: var(--muted);
+      max-width: 560px; margin-bottom: 28px;
+    }
+    .hero-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px; color: var(--muted);
+    }
+    .chip span { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+    /* ── Article layout ── */
+    .content { padding: 0 56px 80px; max-width: 860px; }
+
+    section { padding-top: 72px; }
+    section:first-child { padding-top: 56px; }
+
+    .section-label {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px;
+    }
+    .section-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .section-number {
+      font-size: 11px; font-weight: 700;
+      color: var(--primary);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    section h2 {
+      font-size: 26px; font-weight: 800;
+      color: #fff;
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+    section > p.lead {
+      font-size: 15px; color: var(--muted);
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+
+    h3 { font-size: 17px; font-weight: 700; color: #e2e8f0; margin: 28px 0 12px; }
+    h4 { font-size: 14px; font-weight: 600; color: #cbd5e1; margin: 20px 0 8px; }
+    p { color: var(--muted); margin-bottom: 14px; }
+    p strong { color: var(--text); }
+
+    /* Steps */
+    .steps { counter-reset: step; list-style: none; margin: 0 0 24px; }
+    .steps li {
+      counter-increment: step;
+      display: flex; gap: 14px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .steps li::before {
+      content: counter(step);
+      min-width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--primary), #4F46E5);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .steps li .step-body { flex: 1; }
+    .steps li strong { color: var(--text); display: block; margin-bottom: 2px; }
+
+    /* Cards grid */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin: 16px 0 24px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      transition: border-color .2s, transform .15s;
+    }
+    .card:hover { border-color: rgba(124,58,237,.4); transform: translateY(-2px); }
+    .card-icon { font-size: 24px; margin-bottom: 10px; }
+    .card h4 { margin: 0 0 6px; font-size: 14px; color: var(--text); }
+    .card p { font-size: 13px; color: var(--muted); margin: 0; }
+
+    /* Alert boxes */
+    .alert {
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 20px 0;
+      display: flex; gap: 12px;
+      align-items: flex-start;
+      font-size: 13px;
+    }
+    .alert-icon { font-size: 18px; flex-shrink: 0; line-height: 1.4; }
+    .alert-body strong { display: block; margin-bottom: 3px; font-size: 13px; }
+    .alert-body { flex: 1; }
+    .alert.tip { background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.25); }
+    .alert.tip .alert-icon, .alert.tip strong { color: #a78bfa; }
+    .alert.info { background: rgba(6,182,212,.1); border: 1px solid rgba(6,182,212,.25); }
+    .alert.info .alert-icon, .alert.info strong { color: #22d3ee; }
+    .alert.warning { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25); }
+    .alert.warning .alert-icon, .alert.warning strong { color: #fbbf24; }
+    .alert.danger { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); }
+    .alert.danger .alert-icon, .alert.danger strong { color: #f87171; }
+    .alert.success { background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25); }
+    .alert.success .alert-icon, .alert.success strong { color: #34d399; }
+
+    /* Feature table */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 13px; }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-green { background: rgba(16,185,129,.15); color: #34d399; }
+    .badge-purple { background: rgba(124,58,237,.15); color: #a78bfa; }
+    .badge-cyan { background: rgba(6,182,212,.15); color: #22d3ee; }
+    .badge-amber { background: rgba(245,158,11,.15); color: #fbbf24; }
+    .badge-gray { background: rgba(148,163,184,.1); color: #94a3b8; }
+
+    /* UI mockup */
+    .mockup {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .mockup-bar {
+      background: var(--surface-elevated);
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; color: var(--muted);
+    }
+    .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .mockup-body { padding: 20px; }
+
+    /* Highlight box */
+    .highlight {
+      background: linear-gradient(135deg, rgba(124,58,237,.08), rgba(6,182,212,.08));
+      border: 1px solid rgba(124,58,237,.2);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin: 20px 0;
+    }
+    .highlight h4 { color: #c4b5fd; margin: 0 0 8px; font-size: 14px; }
+    .highlight p { margin: 0; font-size: 13px; }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    /* List */
+    ul.list { list-style: none; margin: 12px 0 20px; }
+    ul.list li {
+      padding: 6px 0 6px 22px;
+      position: relative;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    ul.list li::before {
+      content: '▸';
+      position: absolute; left: 4px;
+      color: var(--primary);
+      font-size: 12px;
+    }
+    ul.list li strong { color: var(--text); }
+
+    /* FAQ */
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .faq-q {
+      padding: 14px 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 14px; font-weight: 600; color: var(--text);
+      background: var(--surface);
+      transition: background .15s;
+      user-select: none;
+    }
+    .faq-q:hover { background: var(--surface-elevated); }
+    .faq-q .arrow { color: var(--primary); font-size: 18px; transition: transform .2s; }
+    .faq-a {
+      padding: 0 18px;
+      max-height: 0; overflow: hidden;
+      transition: max-height .3s ease, padding .3s;
+      font-size: 13px; color: var(--muted);
+      background: var(--surface);
+    }
+    .faq-item.open .faq-a { max-height: 200px; padding: 12px 18px 16px; }
+    .faq-item.open .faq-q .arrow { transform: rotate(90deg); }
+
+    /* Plan comparison */
+    .plan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0 24px; }
+    .plan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 14px;
+      position: relative;
+    }
+    .plan-card.popular { border-color: var(--primary); }
+    .plan-popular-badge {
+      position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+      background: var(--primary);
+      color: #fff; font-size: 10px; font-weight: 700;
+      padding: 2px 10px; border-radius: 20px;
+      white-space: nowrap;
+    }
+    .plan-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .plan-price { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+    .plan-price span { font-size: 11px; font-weight: 400; color: var(--muted); }
+    .plan-feature { font-size: 11px; color: var(--muted); display: flex; align-items: flex-start; gap: 5px; margin-bottom: 5px; }
+    .plan-feature .ok { color: var(--green); flex-shrink: 0; }
+    .plan-feature .no { color: #374151; flex-shrink: 0; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      :root { --sidebar-w: 0px; }
+      #sidebar { transform: translateX(-280px); width: 280px; }
+      #sidebar.open { transform: translateX(0); }
+      #topbar { display: flex; }
+      #main { margin-left: 0; padding-top: 56px; }
+      .hero { padding: 32px 20px 28px; }
+      .hero h1 { font-size: 26px; }
+      .content { padding: 0 20px 60px; }
+      .cards { grid-template-columns: 1fr 1fr; }
+      .plan-grid { grid-template-columns: 1fr 1fr; }
+      #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99; }
+      #overlay.show { display: block; }
+    }
+    @media (max-width: 480px) {
+      .cards { grid-template-columns: 1fr; }
+      .plan-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Progress bar */
+    .reading-bar {
+      position: fixed; top: 0; left: var(--sidebar-w); right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--cyan));
+      transform-origin: left;
+      transform: scaleX(0);
+      z-index: 300;
+      transition: transform .1s;
+    }
+
+    /* Print */
+    @media print {
+      #sidebar, #topbar, .reading-bar { display: none !important; }
+      #main { margin-left: 0 !important; }
+      .hero { padding: 20px !important; }
+      .content { padding: 0 20px !important; }
+      section { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="reading-bar" id="reading-bar"></div>
+<div id="overlay"></div>
+
+<!-- ── SIDEBAR ── -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">M</div>
+    <div class="sidebar-logo-text">
+      <p>MEI Control Pro</p>
+      <p>Manual do Usuário</p>
+    </div>
+  </div>
+
+  <div class="sidebar-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" id="search-input" placeholder="Buscar no manual..." />
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Primeiros passos</div>
+    <a href="#intro">📖 Introdução</a>
+    <a href="#cadastro">🔐 Cadastro e Acesso</a>
+    <a href="#onboarding">🚀 Configuração Inicial</a>
+
+    <div class="sidebar-section">Financeiro</div>
+    <a href="#dashboard">📊 Dashboard</a>
+    <a href="#receitas">💰 Receitas</a>
+    <a href="#despesas">💸 Despesas</a>
+    <a href="#financeiro">📈 Financeiro</a>
+    <a href="#categorias">🏷️ Categorias</a>
+
+    <div class="sidebar-section">Fiscal</div>
+    <a href="#das">🧾 DAS — Guia de Pagamento</a>
+    <a href="#irpf">📋 IRPF Anual</a>
+    <a href="#relatorios">📁 Relatórios</a>
+
+    <div class="sidebar-section">Conta</div>
+    <a href="#perfil">👤 Perfil</a>
+    <a href="#assinatura">👑 Planos e Assinatura</a>
+
+    <div class="sidebar-section">Ajuda</div>
+    <a href="#faq">❓ Perguntas Frequentes</a>
+    <a href="#suporte">💬 Suporte</a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <p>Versão 2.0 &nbsp;·&nbsp; Atualizado em Abril/2026</p>
+    <p style="margin-top:4px">Suporte: <a href="mailto:suporte@sismeipro.com.br">suporte@sismeipro.com.br</a></p>
+  </div>
+</aside>
+
+<!-- ── TOP BAR MOBILE ── -->
+<header id="topbar">
+  <button id="menu-btn" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+  <h1>Manual — MEI Control Pro</h1>
+</header>
+
+<!-- ── MAIN ── -->
+<main id="main">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">📘 Documentação Oficial</div>
+    <h1>Manual do Usuário<br>MEI Control Pro</h1>
+    <p>Tudo que você precisa saber para gerenciar seu negócio como MEI com inteligência, praticidade e segurança.</p>
+    <div class="hero-chips">
+      <div class="chip"><span style="background:#10B981"></span> Dashboard Financeiro</div>
+      <div class="chip"><span style="background:#7C3AED"></span> Controle de Receitas</div>
+      <div class="chip"><span style="background:#06B6D4"></span> DAS Automático</div>
+      <div class="chip"><span style="background:#F59E0B"></span> Relatórios Gerenciais</div>
+      <div class="chip"><span style="background:#EF4444"></span> IRPF Anual</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ─────────────────────────────── 1. INTRODUÇÃO ─── -->
+    <section id="intro">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(124,58,237,.15)">📖</div>
+        <span class="section-number">Seção 01</span>
+      </div>
+      <h2>Introdução ao MEI Control Pro</h2>
+      <p class="lead">Uma plataforma completa para o Microempreendedor Individual gerenciar finanças, obrigações fiscais e crescimento do negócio.</p>
+
+      <p>O <strong>MEI Control Pro</strong> foi desenvolvido para resolver o principal problema dos microempreendedores: a falta de controle financeiro. Com uma interface intuitiva e recursos poderosos, você tem em mãos tudo o que precisa para manter seu negócio organizado, lucrativo e em dia com o fisco.</p>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">📊</div>
+          <h4>Dashboard em Tempo Real</h4>
+          <p>Visão consolidada de receitas, despesas, saldo e limite MEI em um só lugar.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🧾</div>
+          <h4>DAS Simplificado</h4>
+          <p>Acompanhe seu guia de pagamento mensal com alertas de vencimento automáticos.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📈</div>
+          <h4>Relatórios Gerenciais</h4>
+          <p>Gráficos e análises para tomar decisões baseadas em dados reais do seu negócio.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📋</div>
+          <h4>IRPF Anual</h4>
+          <p>Declaração do Imposto de Renda facilitada com os dados já lançados no sistema.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔒</div>
+          <h4>100% Seguro</h4>
+          <p>Dados criptografados e armazenados com os mais altos padrões de segurança.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📱</div>
+          <h4>Funciona em Qualquer Dispositivo</h4>
+          <p>Acesse pelo celular, tablet ou computador — sempre sincronizado.</p>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">ℹ️</div>
+        <div class="alert-body">
+          <strong>Limite Anual do MEI</strong>
+          O MEI pode faturar até <strong>R$ 81.000,00 por ano</strong> (R$ 6.750,00/mês). O sistema monitora automaticamente quanto você já faturou em relação a este limite.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 2. CADASTRO ─── -->
+    <section id="cadastro">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(6,182,212,.15)">🔐</div>
+        <span class="section-number">Seção 02</span>
+      </div>
+      <h2>Cadastro e Acesso</h2>
+      <p class="lead">Como criar sua conta, confirmar o e-mail e acessar a plataforma com segurança.</p>
+
+      <h3>Criar uma nova conta</h3>
+      <ol class="steps">
+        <li>
+          <div class="step-body">
+            <strong>Acesse a plataforma</strong>
+            Abra <strong>app.sismeipro.com.br</strong> no seu navegador ou celular.
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Clique em "Criar conta"</strong>
+            Na tela de login, alterne para o formulário de cadastro clicando em <em>Criar conta</em>.
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Preencha seus dados</strong>
+            Informe seu nome completo, e-mail, número de celular (com DDD) e cidade.
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Crie uma senha segura</strong>
+            Use no mínimo 8 caracteres, combinando letras, números e símbolos.
+          </div>
+        </li>
+        <li>
+          <div class="step-body">
+            <strong>Confirme seu e-mail</strong>
+            Acesse sua caixa de entrada e clique no link de confirmação enviado pelo sistema.
+          </div>
+        </li>
+      </ol>
+
+      <div class="alert warning">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-body">
+          <strong>Confirme seu e-mail antes de usar</strong>
+          Sem confirmar o e-mail, algumas funcionalidades podem ficar limitadas. Verifique também a pasta de spam caso não encontre o e-mail de confirmação.
+        </div>
+      </div>
+
+      <h3>Fazer login</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Informe seu e-mail e senha</strong> cadastrados na plataforma.</div></li>
+        <li><div class="step-body"><strong>Clique em "Entrar"</strong> e você será redirecionado para o dashboard.</div></li>
+      </ol>
+
+      <h3>Recuperar senha</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Na tela de login</strong>, clique em <em>"Esqueci minha senha"</em>.</div></li>
+        <li><div class="step-body"><strong>Informe seu e-mail</strong> cadastrado e clique em Enviar.</div></li>
+        <li><div class="step-body"><strong>Acesse o link</strong> recebido no e-mail (válido por 1 hora).</div></li>
+        <li><div class="step-body"><strong>Crie uma nova senha</strong> e confirme. Você será redirecionado para o login.</div></li>
+      </ol>
+
+      <div class="alert tip">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <strong>Dica de segurança</strong>
+          Nunca compartilhe sua senha. O suporte do MEI Control Pro <strong>jamais</strong> solicitará sua senha por e-mail, WhatsApp ou qualquer outro canal.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 3. ONBOARDING ─── -->
+    <section id="onboarding">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(16,185,129,.15)">🚀</div>
+        <span class="section-number">Seção 03</span>
+      </div>
+      <h2>Configuração Inicial</h2>
+      <p class="lead">Após o primeiro acesso, um assistente irá guiá-lo pela configuração básica do seu perfil.</p>
+
+      <p>Na primeira vez que você acessa o sistema, o <strong>assistente de configuração (Onboarding)</strong> aparece automaticamente. Ele é rápido e essencial para que o sistema funcione corretamente para o seu negócio.</p>
+
+      <h3>O que você vai configurar</h3>
+      <ul class="list">
+        <li><strong>CNPJ:</strong> número do seu MEI (14 dígitos, sem pontuação)</li>
+        <li><strong>Atividade principal:</strong> o ramo do seu negócio</li>
+        <li><strong>Cidade e estado:</strong> localização do seu MEI</li>
+        <li><strong>Telefone:</strong> para receber alertas e notificações via WhatsApp</li>
+      </ul>
+
+      <div class="alert tip">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <strong>Pode fazer depois</strong>
+          Se não tiver o CNPJ em mãos, você pode pular o onboarding e preencher depois em <strong>Perfil → Meus dados</strong>. Porém, o DAS só funcionará corretamente com o CNPJ cadastrado.
+        </div>
+      </div>
+
+      <div class="highlight">
+        <h4>📲 Notificações WhatsApp</h4>
+        <p>Ao cadastrar seu celular, você passará a receber alertas automáticos de <strong>vencimento do DAS</strong> (15, 7 e 1 dia antes), além de comunicados importantes do sistema diretamente pelo WhatsApp.</p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 4. DASHBOARD ─── -->
+    <section id="dashboard">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(124,58,237,.15)">📊</div>
+        <span class="section-number">Seção 04</span>
+      </div>
+      <h2>Dashboard</h2>
+      <p class="lead">A tela principal do sistema — uma visão completa e em tempo real da saúde financeira do seu negócio.</p>
+
+      <h3>Cards de Métricas</h3>
+      <p>Na parte superior do dashboard, quatro cards mostram os indicadores mais importantes do mês atual:</p>
+
+      <table>
+        <thead>
+          <tr><th>Card</th><th>O que mostra</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>💰 <strong>Receitas do Mês</strong></td><td>Total recebido no mês atual. Inclui receitas com status "pago".</td></tr>
+          <tr><td>💸 <strong>Despesas do Mês</strong></td><td>Total de gastos registrados no mês, independente do status.</td></tr>
+          <tr><td>📊 <strong>Saldo Atual</strong></td><td>Receitas menos despesas. Positivo = lucro. Negativo = prejuízo.</td></tr>
+          <tr><td>🏢 <strong>Limite MEI</strong></td><td>Percentual do faturamento anual em relação ao limite de R$ 81.000.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Gráfico de Receitas vs Despesas</h3>
+      <p>O gráfico de linha mostra a evolução mensal de receitas, despesas e lucro ao longo do ano. Passe o mouse sobre os pontos para ver os valores detalhados de cada mês.</p>
+
+      <h3>Gráfico de Categorias</h3>
+      <p>O gráfico em rosca (donut) mostra a distribuição das suas despesas por categoria, ajudando a identificar onde você mais gasta e onde é possível economizar.</p>
+
+      <h3>Últimas Movimentações</h3>
+      <p>Lista das transações mais recentes (receitas e despesas) com status, categoria, valor e data. Clique em qualquer item para ver os detalhes ou editar.</p>
+
+      <h3>Card DAS</h3>
+      <p>Exibe o DAS do mês atual com valor, vencimento e status (pendente, pago ou em atraso). Possui botão de acesso rápido ao portal gov.br para pagamento.</p>
+
+      <div class="alert warning">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-body">
+          <strong>DAS em Atraso</strong>
+          Se o DAS aparece como <span style="color:#f87171">em atraso</span>, ele terá acréscimo de multa de 0,33% ao dia + juros SELIC. Regularize o mais rápido possível para evitar a exclusão do MEI.
+        </div>
+      </div>
+
+      <h3>Ações Rápidas</h3>
+      <p>Botões de atalho para as funções mais usadas: Lançar Receita, Lançar Despesa, Ver DAS e acessar Relatórios.</p>
+    </section>
+
+    <!-- ─────────────────────────────── 5. RECEITAS ─── -->
+    <section id="receitas">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(16,185,129,.15)">💰</div>
+        <span class="section-number">Seção 05</span>
+      </div>
+      <h2>Receitas</h2>
+      <p class="lead">Registre tudo que entra no seu caixa — vendas, prestações de serviço e outros recebimentos.</p>
+
+      <h3>Lançar uma nova receita</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Clique em "Nova Receita"</strong> (botão verde no topo da página ou nas ações rápidas do dashboard).</div></li>
+        <li><div class="step-body"><strong>Descrição:</strong> descreva brevemente o que foi recebido. Ex: "Serviço de manutenção — Cliente João".</div></li>
+        <li><div class="step-body"><strong>Valor:</strong> informe o valor recebido em reais.</div></li>
+        <li><div class="step-body"><strong>Data:</strong> selecione a data do recebimento (padrão: hoje).</div></li>
+        <li><div class="step-body"><strong>Categoria:</strong> selecione a categoria mais adequada (ex: Serviços, Produtos, Consultoria).</div></li>
+        <li><div class="step-body"><strong>Status:</strong> escolha entre <em>Recebido</em> (já entrou no caixa) ou <em>A receber</em> (aguardando pagamento).</div></li>
+        <li><div class="step-body"><strong>Salvar:</strong> clique em "Salvar" para registrar a receita.</div></li>
+      </ol>
+
+      <h3>Editar ou excluir uma receita</h3>
+      <p>Na listagem de receitas, clique no ícone de <strong>edição (✏️)</strong> ao lado do lançamento para alterar qualquer campo. Para excluir, clique no ícone de <strong>lixeira (🗑️)</strong> e confirme a exclusão.</p>
+
+      <h3>Buscar receitas</h3>
+      <p>Use a barra de busca no topo da listagem para filtrar receitas por descrição ou categoria.</p>
+
+      <div class="alert info">
+        <div class="alert-icon">ℹ️</div>
+        <div class="alert-body">
+          <strong>Plano Gratuito</strong>
+          No plano Gratuito, você pode lançar até <strong>20 receitas por mês</strong>. Para lançamentos ilimitados, faça upgrade para o plano Basic ou superior.
+        </div>
+      </div>
+
+      <div class="highlight">
+        <h4>📌 Boa prática: lance no dia do recebimento</h4>
+        <p>Lançar as receitas no mesmo dia do recebimento garante um fluxo de caixa preciso e facilita a conciliação ao final do mês. Se você usa PIX ou cartão, o comprovante serve como referência para a data e valor.</p>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 6. DESPESAS ─── -->
+    <section id="despesas">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(239,68,68,.15)">💸</div>
+        <span class="section-number">Seção 06</span>
+      </div>
+      <h2>Despesas</h2>
+      <p class="lead">Registre todos os custos do seu negócio para ter um controle financeiro preciso e identificar oportunidades de economia.</p>
+
+      <h3>Lançar uma nova despesa</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Clique em "Nova Despesa"</strong> (botão vermelho no topo da página).</div></li>
+        <li><div class="step-body"><strong>Descrição:</strong> identifique o gasto. Ex: "Compra de materiais — Loja X".</div></li>
+        <li><div class="step-body"><strong>Valor:</strong> informe o valor pago.</div></li>
+        <li><div class="step-body"><strong>Data:</strong> data do pagamento ou emissão da nota.</div></li>
+        <li><div class="step-body"><strong>Categoria:</strong> classifique o gasto (Fornecedores, Transporte, Equipamentos, etc.).</div></li>
+        <li><div class="step-body"><strong>Status:</strong> <em>Pago</em> (já saiu do caixa) ou <em>A pagar</em> (contas futuras).</div></li>
+        <li><div class="step-body"><strong>Salvar.</strong></div></li>
+      </ol>
+
+      <div class="alert tip">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <strong>Despesas dedutíveis</strong>
+          Como MEI, você pode deduzir despesas relacionadas à atividade do negócio no IRPF. Registrar todas as despesas com categoria correta facilita muito a declaração anual.
+        </div>
+      </div>
+
+      <h3>Categorias mais comuns para despesas</h3>
+      <table>
+        <thead><tr><th>Categoria</th><th>Exemplos</th></tr></thead>
+        <tbody>
+          <tr><td>🚗 Transporte</td><td>Combustível, Uber, pedágio, manutenção do veículo</td></tr>
+          <tr><td>🏬 Fornecedores</td><td>Matéria-prima, mercadorias para revenda</td></tr>
+          <tr><td>💻 Equipamentos</td><td>Computador, ferramentas, celular de trabalho</td></tr>
+          <tr><td>📱 Serviços Digitais</td><td>Internet, telefone, softwares, assinaturas</td></tr>
+          <tr><td>🏢 Aluguel/Espaço</td><td>Aluguel de sala, coworking, armazém</td></tr>
+          <tr><td>📣 Marketing</td><td>Panfletos, anúncios online, redes sociais</td></tr>
+          <tr><td>🧾 Impostos/Taxas</td><td>DAS, taxas bancárias, licenças</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ─────────────────────────────── 7. FINANCEIRO ─── -->
+    <section id="financeiro">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(6,182,212,.15)">📈</div>
+        <span class="section-number">Seção 07</span>
+      </div>
+      <h2>Visão Financeira</h2>
+      <p class="lead">Uma análise consolidada das finanças do seu negócio, com resumo por período e projeções.</p>
+
+      <p>A tela <strong>Financeiro</strong> agrega receitas e despesas em uma visão gerencial completa. Disponível a partir do plano <span class="badge badge-cyan">Basic</span>.</p>
+
+      <h3>O que você encontra aqui</h3>
+      <ul class="list">
+        <li><strong>Resumo do mês:</strong> receitas, despesas, saldo e variação em relação ao mês anterior</li>
+        <li><strong>Fluxo de caixa:</strong> entradas e saídas dia a dia</li>
+        <li><strong>Projeção do mês:</strong> estimativa de fechamento baseada no histórico</li>
+        <li><strong>Faturamento acumulado no ano:</strong> quanto você já faturou e quanto ainda pode faturar dentro do limite MEI</li>
+        <li><strong>Movimentações completas:</strong> todas as transações (receitas + despesas) em uma única listagem filtrada</li>
+      </ul>
+
+      <div class="alert info">
+        <div class="alert-icon">ℹ️</div>
+        <div class="alert-body">
+          <strong>Diferença entre Receita e Faturamento</strong>
+          Para o limite do MEI, considera-se o <strong>faturamento bruto</strong> (tudo que você cobrou de clientes), independente de já ter recebido. A receita no sistema pode ser lançada como "a receber" e ainda assim contar para o limite anual.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 8. CATEGORIAS ─── -->
+    <section id="categorias">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(245,158,11,.15)">🏷️</div>
+        <span class="section-number">Seção 08</span>
+      </div>
+      <h2>Categorias</h2>
+      <p class="lead">Organize suas transações com categorias personalizadas para relatórios mais precisos.</p>
+
+      <p>O sistema já vem com categorias padrão para receitas e despesas, mas você pode criar e gerenciar suas próprias categorias em <strong>Menu → Categorias</strong>. Disponível no plano <span class="badge badge-cyan">Basic</span> ou superior.</p>
+
+      <h3>Criar uma nova categoria</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Acesse</strong> o menu lateral → <em>Categorias</em>.</div></li>
+        <li><div class="step-body"><strong>Clique em "Nova Categoria"</strong> e defina o nome.</div></li>
+        <li><div class="step-body"><strong>Escolha o tipo:</strong> Receita ou Despesa.</div></li>
+        <li><div class="step-body"><strong>Selecione uma cor e ícone</strong> para identificação visual.</div></li>
+        <li><div class="step-body"><strong>Salvar.</strong> A categoria já estará disponível ao lançar transações.</div></li>
+      </ol>
+
+      <div class="alert tip">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <strong>Dica de organização</strong>
+          Crie categorias específicas para o seu nicho. Um eletricista, por exemplo, pode ter "Materiais Elétricos", "Fios e Cabos", "EPI" — isso torna o relatório por categoria muito mais útil para negociar com fornecedores.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 9. DAS ─── -->
+    <section id="das">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(239,68,68,.15)">🧾</div>
+        <span class="section-number">Seção 09</span>
+      </div>
+      <h2>DAS — Documento de Arrecadação do Simples</h2>
+      <p class="lead">Gerencie o pagamento mensal obrigatório do MEI e evite multas com alertas automáticos de vencimento.</p>
+
+      <div class="alert danger">
+        <div class="alert-icon">🚨</div>
+        <div class="alert-body">
+          <strong>Obrigação mensal</strong>
+          O pagamento do DAS é obrigatório todo mês, independente de você ter faturado ou não. O não pagamento por 12 meses consecutivos leva ao cancelamento automático do CNPJ pela Receita Federal.
+        </div>
+      </div>
+
+      <h3>O que é o DAS</h3>
+      <p>O DAS é a guia de arrecadação mensal do MEI que unifica o pagamento de:</p>
+      <ul class="list">
+        <li><strong>INSS:</strong> 5% do salário mínimo (contribuição previdenciária)</li>
+        <li><strong>ISS</strong> (para prestadores de serviço): R$ 5,00/mês</li>
+        <li><strong>ICMS</strong> (para comércio/indústria): R$ 1,00/mês</li>
+      </ul>
+
+      <h3>Vencimento</h3>
+      <p>O DAS vence todo dia <strong>20 de cada mês</strong>, referente à competência do mês anterior. Exemplo: o DAS de Janeiro vence em 20 de Fevereiro. Se o dia 20 cair no final de semana ou feriado, o vencimento é prorrogado para o próximo dia útil.</p>
+
+      <h3>Como pagar o DAS pelo sistema</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Acesse</strong> o menu lateral → <em>DAS / Impostos</em>.</div></li>
+        <li><div class="step-body"><strong>Visualize</strong> o DAS do mês atual com o valor exato e data de vencimento.</div></li>
+        <li><div class="step-body"><strong>Clique em "Pagar DAS"</strong> — você será redirecionado para o portal <strong>gov.br</strong> do Empreendedor.</div></li>
+        <li><div class="step-body"><strong>No gov.br:</strong> acesse com seu CPF, emita o boleto e pague via PIX, Internet Banking ou lotérica.</div></li>
+        <li><div class="step-body"><strong>Registre o pagamento</strong> no sistema clicando em "Marcar como Pago" após confirmar o pagamento.</div></li>
+      </ol>
+
+      <h3>Alertas automáticos</h3>
+      <p>O sistema envia alertas via <strong>WhatsApp</strong> automaticamente:</p>
+      <table>
+        <thead><tr><th>Quando</th><th>Mensagem</th></tr></thead>
+        <tbody>
+          <tr><td>15 dias antes</td><td>Lembrete antecipado do vencimento</td></tr>
+          <tr><td>7 dias antes</td><td>Alerta de vencimento próximo</td></tr>
+          <tr><td>1 dia antes</td><td>Alerta urgente de vencimento amanhã</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Extrato de pagamentos</h3>
+      <p>Na página do DAS você encontra o histórico completo de todos os meses, com status (Pago ✅, Pendente ⏳ ou Em atraso 🔴) e a competência de cada guia.</p>
+
+      <div class="alert tip">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <strong>Pagou via internet banking?</strong>
+          Após realizar o pagamento, volte ao sistema e clique em <strong>"Marcar como Pago"</strong> no DAS do mês. Isso atualiza o status no histórico e garante que os alertas parem.
+        </div>
+      </div>
+
+      <h3>Imprimir recibo</h3>
+      <p>Use o botão <strong>"Imprimir"</strong> na página do DAS para gerar um comprovante em PDF do extrato mensal com seus dados (nome, CNPJ, cidade) para arquivo ou apresentação a contador.</p>
+    </section>
+
+    <!-- ─────────────────────────────── 10. IRPF ─── -->
+    <section id="irpf">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(16,185,129,.15)">📋</div>
+        <span class="section-number">Seção 10</span>
+      </div>
+      <h2>IRPF — Imposto de Renda Anual</h2>
+      <p class="lead">Declaração do Imposto de Renda facilitada com base nas transações já lançadas no sistema.</p>
+
+      <p>Disponível no plano <span class="badge badge-amber">Premium</span>, o módulo de IRPF consolida automaticamente os dados do ano e gera o resumo necessário para sua declaração. Disponível a partir do mês de março de cada ano.</p>
+
+      <h3>O MEI é obrigado a declarar IRPF?</h3>
+      <p>O MEI deve declarar IRPF como <strong>pessoa física</strong> se se enquadrar em uma das condições abaixo:</p>
+      <ul class="list">
+        <li>Recebeu rendimentos tributáveis acima de <strong>R$ 33.888,00</strong> no ano (2025)</li>
+        <li>Recebeu rendimentos isentos acima de <strong>R$ 200.000,00</strong></li>
+        <li>Realizou operações em bolsa de valores</li>
+        <li>Possui bens e direitos acima de <strong>R$ 800.000,00</strong></li>
+      </ul>
+
+      <div class="alert info">
+        <div class="alert-icon">ℹ️</div>
+        <div class="alert-body">
+          <strong>Lucro do MEI é isento de IR</strong>
+          O lucro presumido do MEI (calculado pela Receita Federal com base no faturamento) é isento de Imposto de Renda. Apenas o que exceder o lucro presumido pode ser tributado.
+        </div>
+      </div>
+
+      <h3>O que o módulo de IRPF oferece</h3>
+      <ul class="list">
+        <li>Resumo anual de faturamento e despesas</li>
+        <li>Cálculo do lucro isento de IR</li>
+        <li>Lista de bens relacionados ao negócio</li>
+        <li>Relatório para entrega ao contador</li>
+      </ul>
+    </section>
+
+    <!-- ─────────────────────────────── 11. RELATÓRIOS ─── -->
+    <section id="relatorios">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(124,58,237,.15)">📁</div>
+        <span class="section-number">Seção 11</span>
+      </div>
+      <h2>Relatórios</h2>
+      <p class="lead">Análises detalhadas para entender a evolução do seu negócio e tomar decisões mais inteligentes.</p>
+
+      <p>Disponível no plano <span class="badge badge-purple">Pro</span> ou superior. Acesse em <strong>Menu → Relatórios</strong>.</p>
+
+      <h3>Relatórios disponíveis</h3>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">📊</div>
+          <h4>Receita vs Despesa</h4>
+          <p>Gráfico mensal comparando entradas e saídas ao longo do ano.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🍩</div>
+          <h4>Despesas por Categoria</h4>
+          <p>Visualize onde seu dinheiro está indo com o gráfico em rosca.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏆</div>
+          <h4>Top Meses</h4>
+          <p>Ranking dos 5 meses mais lucrativos do ano.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📉</div>
+          <h4>Análise de Tendências</h4>
+          <p>Identifique padrões de crescimento ou queda no faturamento.</p>
+        </div>
+      </div>
+
+      <h3>Imprimir / Exportar</h3>
+      <p>Use o botão <strong>"Imprimir"</strong> no canto superior direito da página de relatórios para gerar um PDF formatado com todos os gráficos e tabelas — ideal para apresentar ao contador ou guardar nos seus registros anuais.</p>
+
+      <div class="alert tip">
+        <div class="alert-icon">💡</div>
+        <div class="alert-body">
+          <strong>Use os relatórios para negociar</strong>
+          Mostre o relatório de faturamento ao banco para solicitar crédito ou limite de cartão. Muitas instituições aceitam relatórios gerenciais em vez de declaração de IR para MEIs.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 12. PERFIL ─── -->
+    <section id="perfil">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(6,182,212,.15)">👤</div>
+        <span class="section-number">Seção 12</span>
+      </div>
+      <h2>Perfil</h2>
+      <p class="lead">Mantenha seus dados sempre atualizados para garantir o funcionamento correto de todas as funcionalidades.</p>
+
+      <h3>O que você pode configurar</h3>
+      <table>
+        <thead><tr><th>Campo</th><th>Descrição</th><th>Onde é usado</th></tr></thead>
+        <tbody>
+          <tr><td>Nome completo</td><td>Seu nome ou nome fantasia do MEI</td><td>Comprovantes, DAS, relatórios</td></tr>
+          <tr><td>E-mail</td><td>Endereço de e-mail de acesso</td><td>Login, notificações</td></tr>
+          <tr><td>Telefone</td><td>Celular com DDD (ex: 21999999999)</td><td>Alertas WhatsApp</td></tr>
+          <tr><td>CNPJ</td><td>14 dígitos do seu MEI</td><td>DAS, notas, relatórios</td></tr>
+          <tr><td>Cidade</td><td>Cidade de atuação do MEI</td><td>Relatórios, suporte</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Alterar senha</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Acesse</strong> Menu → <em>Perfil</em>.</div></li>
+        <li><div class="step-body"><strong>Role até</strong> a seção "Segurança".</div></li>
+        <li><div class="step-body"><strong>Informe</strong> a senha atual e a nova senha (mínimo 8 caracteres).</div></li>
+        <li><div class="step-body"><strong>Confirme</strong> a nova senha e clique em <em>Salvar</em>.</div></li>
+      </ol>
+
+      <div class="alert warning">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-body">
+          <strong>Telefone incompleto = sem alertas</strong>
+          Sem o telefone cadastrado com DDD correto, os alertas de vencimento do DAS via WhatsApp não serão enviados. Certifique-se de que o número está atualizado.
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 13. ASSINATURA ─── -->
+    <section id="assinatura">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(245,158,11,.15)">👑</div>
+        <span class="section-number">Seção 13</span>
+      </div>
+      <h2>Planos e Assinatura</h2>
+      <p class="lead">Escolha o plano ideal para o seu negócio e desbloqueie todas as funcionalidades do MEI Control Pro.</p>
+
+      <div class="plan-grid">
+        <div class="plan-card">
+          <div class="plan-name">Gratuito</div>
+          <div class="plan-price">R$ 0<span>/mês</span></div>
+          <div class="plan-feature"><span class="ok">✓</span> Dashboard</div>
+          <div class="plan-feature"><span class="ok">✓</span> Até 20 lançamentos/mês</div>
+          <div class="plan-feature"><span class="ok">✓</span> Perfil</div>
+          <div class="plan-feature"><span class="no">✕</span> Financeiro</div>
+          <div class="plan-feature"><span class="no">✕</span> DAS & Impostos</div>
+          <div class="plan-feature"><span class="no">✕</span> Relatórios</div>
+        </div>
+        <div class="plan-card">
+          <div class="plan-name" style="color:#22d3ee">Basic</div>
+          <div class="plan-price" style="color:#22d3ee">R$ 19,90<span>/mês</span></div>
+          <div class="plan-feature"><span class="ok">✓</span> Tudo do Gratuito</div>
+          <div class="plan-feature"><span class="ok">✓</span> Lançamentos ilimitados</div>
+          <div class="plan-feature"><span class="ok">✓</span> Financeiro</div>
+          <div class="plan-feature"><span class="ok">✓</span> Categorias</div>
+          <div class="plan-feature"><span class="no">✕</span> DAS & Impostos</div>
+          <div class="plan-feature"><span class="no">✕</span> Relatórios</div>
+        </div>
+        <div class="plan-card popular">
+          <div class="plan-popular-badge">⭐ MAIS POPULAR</div>
+          <div class="plan-name" style="color:#a78bfa">Pro</div>
+          <div class="plan-price" style="color:#a78bfa">R$ 39,90<span>/mês</span></div>
+          <div class="plan-feature"><span class="ok">✓</span> Tudo do Basic</div>
+          <div class="plan-feature"><span class="ok">✓</span> DAS & Impostos</div>
+          <div class="plan-feature"><span class="ok">✓</span> Relatórios avançados</div>
+          <div class="plan-feature"><span class="ok">✓</span> Exportar PDF</div>
+          <div class="plan-feature"><span class="no">✕</span> IRPF Anual</div>
+        </div>
+        <div class="plan-card">
+          <div class="plan-name" style="color:#fbbf24">Premium</div>
+          <div class="plan-price" style="color:#fbbf24">R$ 59,90<span>/mês</span></div>
+          <div class="plan-feature"><span class="ok">✓</span> Tudo do Pro</div>
+          <div class="plan-feature"><span class="ok">✓</span> IRPF Anual automático</div>
+          <div class="plan-feature"><span class="ok">✓</span> Suporte prioritário</div>
+        </div>
+      </div>
+
+      <h3>Como assinar</h3>
+      <ol class="steps">
+        <li><div class="step-body"><strong>Acesse</strong> Menu → <em>Assinatura</em>.</div></li>
+        <li><div class="step-body"><strong>Escolha o plano</strong> desejado e clique em <em>Assinar agora</em>.</div></li>
+        <li><div class="step-body"><strong>Você será redirecionado</strong> para o ambiente seguro do <strong>Mercado Pago</strong> para finalizar o pagamento.</div></li>
+        <li><div class="step-body"><strong>Formas de pagamento:</strong> PIX, cartão de crédito (parcelado) ou boleto bancário.</div></li>
+        <li><div class="step-body"><strong>Após confirmação,</strong> o plano é ativado automaticamente em até 5 minutos.</div></li>
+      </ol>
+
+      <div class="alert success">
+        <div class="alert-icon">✅</div>
+        <div class="alert-body">
+          <strong>Pagamento seguro</strong>
+          Toda a transação é processada pelo Mercado Pago com criptografia SSL. O MEI Control Pro não armazena dados de cartão de crédito.
+        </div>
+      </div>
+
+      <h3>Duração e renovação</h3>
+      <p>Todos os planos têm duração de <strong>30 dias</strong>. A renovação não é automática — você receberá um aviso antes do vencimento para renovar manualmente quando quiser.</p>
+    </section>
+
+    <!-- ─────────────────────────────── 14. FAQ ─── -->
+    <section id="faq">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(124,58,237,.15)">❓</div>
+        <span class="section-number">Seção 14</span>
+      </div>
+      <h2>Perguntas Frequentes</h2>
+      <p class="lead">Respostas rápidas para as dúvidas mais comuns dos usuários.</p>
+
+      <div class="faq-item">
+        <div class="faq-q">Posso usar no celular? <span class="arrow">›</span></div>
+        <div class="faq-a">Sim! O MEI Control Pro é 100% responsivo e funciona perfeitamente em smartphones e tablets. Você pode acessar pelo navegador sem precisar instalar nenhum aplicativo.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Meus dados estão seguros? <span class="arrow">›</span></div>
+        <div class="faq-a">Sim. Todos os dados são armazenados com criptografia em servidores seguros no Brasil. Utilizamos autenticação segura e não compartilhamos seus dados com terceiros.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Posso cancelar a assinatura a qualquer momento? <span class="arrow">›</span></div>
+        <div class="faq-a">Sim. Como os planos não são recorrentes (você paga manualmente a cada 30 dias), basta não renovar quando o plano vencer. Seus dados permanecem acessíveis no plano gratuito.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">O sistema emite nota fiscal? <span class="arrow">›</span></div>
+        <div class="faq-a">O MEI Control Pro não emite notas fiscais diretamente, mas integra os dados de faturamento para controle interno. Para emissão de NFS-e, acesse o portal da sua prefeitura ou use o PGMEI da Receita Federal.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">O DAS é gerado automaticamente? <span class="arrow">›</span></div>
+        <div class="faq-a">O sistema exibe o valor e vencimento do DAS e redireciona para o portal gov.br onde você gera e paga o boleto oficial. O MEI Control Pro não gera o boleto diretamente, pois isso é competência da Receita Federal.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Tenho dois MEIs, posso usar o mesmo cadastro? <span class="arrow">›</span></div>
+        <div class="faq-a">Não. Cada MEI deve ter seu próprio cadastro no sistema, pois os dados financeiros, DAS e relatórios são vinculados ao CNPJ. Crie uma conta separada para cada CNPJ.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Posso importar dados de outra planilha? <span class="arrow">›</span></div>
+        <div class="faq-a">No momento, a importação em massa de dados não está disponível. Os lançamentos devem ser feitos manualmente ou via integração futura. Se você tem muitos lançamentos históricos, entre em contato com o suporte para verificar alternativas.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Não recebi os alertas de DAS no WhatsApp, o que fazer? <span class="arrow">›</span></div>
+        <div class="faq-a">Verifique se o número de celular está cadastrado corretamente no seu Perfil (com DDD, ex: 21999999999). Certifique-se também de que o WhatsApp desse número está ativo. Se o problema persistir, entre em contato com o suporte.</div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────────── 15. SUPORTE ─── -->
+    <section id="suporte">
+      <div class="section-label">
+        <div class="section-icon" style="background:rgba(16,185,129,.15)">💬</div>
+        <span class="section-number">Seção 15</span>
+      </div>
+      <h2>Suporte</h2>
+      <p class="lead">Nossa equipe está pronta para ajudar você a tirar o máximo proveito do MEI Control Pro.</p>
+
+      <div class="cards">
+        <div class="card" style="border-color:rgba(37,211,102,.2)">
+          <div class="card-icon">📱</div>
+          <h4>WhatsApp</h4>
+          <p>Atendimento via WhatsApp para dúvidas rápidas e suporte em tempo real.</p>
+          <p style="margin-top:8px"><a href="https://wa.me/5521980485675" style="color:#34d399;font-size:13px;font-weight:600">Iniciar conversa →</a></p>
+        </div>
+        <div class="card" style="border-color:rgba(124,58,237,.2)">
+          <div class="card-icon">📧</div>
+          <h4>E-mail</h4>
+          <p>Envie sua dúvida ou solicitação por e-mail. Respondemos em até 24h úteis.</p>
+          <p style="margin-top:8px"><a href="mailto:suporte@sismeipro.com.br" style="color:#a78bfa;font-size:13px;font-weight:600">suporte@sismeipro.com.br →</a></p>
+        </div>
+        <div class="card" style="border-color:rgba(6,182,212,.2)">
+          <div class="card-icon">🤖</div>
+          <h4>Assistente Virtual</h4>
+          <p>Atendimento automático 24h para dúvidas sobre planos, DAS e funcionalidades.</p>
+          <p style="margin-top:8px;color:#22d3ee;font-size:13px">Disponível no WhatsApp</p>
+        </div>
+      </div>
+
+      <h3>Horário de atendimento humano</h3>
+      <table>
+        <thead><tr><th>Canal</th><th>Horário</th><th>Tempo de resposta</th></tr></thead>
+        <tbody>
+          <tr><td>WhatsApp</td><td>Seg–Sex, 9h às 18h</td><td>Até 2 horas</td></tr>
+          <tr><td>E-mail</td><td>Seg–Sex, 9h às 18h</td><td>Até 24h úteis</td></tr>
+          <tr><td>Assistente Virtual</td><td>24h / 7 dias</td><td>Imediato</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Antes de entrar em contato</h3>
+      <p>Para agilizar o atendimento, tenha em mãos:</p>
+      <ul class="list">
+        <li>Seu <strong>e-mail de cadastro</strong> no sistema</li>
+        <li>O <strong>CNPJ</strong> do seu MEI</li>
+        <li>Uma <strong>descrição detalhada</strong> do problema (com prints se possível)</li>
+        <li>O <strong>nome da funcionalidade</strong> onde o problema ocorreu</li>
+      </ul>
+
+      <div class="alert success">
+        <div class="alert-icon">✅</div>
+        <div class="alert-body">
+          <strong>Suporte Prioritário</strong>
+          Assinantes do plano <strong>Premium</strong> têm atendimento prioritário com tempo de resposta reduzido e linha direta com a equipe técnica.
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div style="text-align:center; padding: 20px 0 10px;">
+        <p style="font-size:13px; color:var(--muted)">MEI Control Pro &nbsp;·&nbsp; CNPJ 50.406.025/0001-68</p>
+        <p style="font-size:12px; color:#4f5f8a; margin-top:4px">© 2026 MEI Control Pro. Todos os direitos reservados.</p>
+        <p style="margin-top:16px">
+          <a href="https://app.sismeipro.com.br" style="color:var(--primary-light); font-size:13px; text-decoration:none; font-weight:600">← Voltar para o sistema</a>
+        </p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+  // ── Sidebar toggle mobile ──
+  const sidebar = document.getElementById('sidebar')
+  const overlay = document.getElementById('overlay')
+  const menuBtn = document.getElementById('menu-btn')
+
+  menuBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('open')
+    overlay.classList.toggle('show')
+  })
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open')
+    overlay.classList.remove('show')
+  })
+
+  // ── Active link on scroll ──
+  const sections = document.querySelectorAll('section[id]')
+  const navLinks = document.querySelectorAll('.sidebar-nav a')
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'))
+        const active = document.querySelector(`.sidebar-nav a[href="#${entry.target.id}"]`)
+        if (active) active.classList.add('active')
+      }
+    })
+  }, { rootMargin: '-30% 0px -60% 0px' })
+
+  sections.forEach(s => observer.observe(s))
+
+  // ── Reading progress bar ──
+  const bar = document.getElementById('reading-bar')
+  window.addEventListener('scroll', () => {
+    const total = document.body.scrollHeight - window.innerHeight
+    const progress = window.scrollY / total
+    bar.style.transform = `scaleX(${progress})`
+  })
+
+  // ── FAQ accordion ──
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      const item = q.parentElement
+      const isOpen = item.classList.contains('open')
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'))
+      if (!isOpen) item.classList.add('open')
+    })
+  })
+
+  // ── Sidebar search ──
+  const searchInput = document.getElementById('search-input')
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim()
+    if (!query) {
+      navLinks.forEach(a => { a.style.display = ''; a.closest('.sidebar-nav') })
+      document.querySelectorAll('.sidebar-section').forEach(s => s.style.display = '')
+      return
+    }
+    navLinks.forEach(a => {
+      const match = a.textContent.toLowerCase().includes(query)
+      a.style.display = match ? '' : 'none'
+    })
+  })
+
+  // ── Close sidebar on nav link click (mobile) ──
+  navLinks.forEach(a => {
+    a.addEventListener('click', () => {
+      sidebar.classList.remove('open')
+      overlay.classList.remove('show')
+    })
+  })
+</script>
+</body>
+</html>

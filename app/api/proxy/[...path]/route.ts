@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+// SUPABASE_INTERNAL_URL é lida em runtime (não baked pelo webpack), ideal para proxy server-side
+// NEXT_PUBLIC_SUPABASE_URL é fallback para compatibilidade
+const SUPABASE_URL = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 async function handler(req: NextRequest, { params }: { params: { path: string[] } }) {
   try {
@@ -27,6 +29,13 @@ async function handler(req: NextRequest, { params }: { params: { path: string[] 
 
     const rangeHeader = req.headers.get('Range')
     if (rangeHeader) headers['Range'] = rangeHeader
+
+    // Headers de schema — necessários para db: { schema: 'sismei' } no cliente JS
+    const acceptProfile = req.headers.get('Accept-Profile')
+    if (acceptProfile) headers['Accept-Profile'] = acceptProfile
+
+    const contentProfile = req.headers.get('Content-Profile')
+    if (contentProfile) headers['Content-Profile'] = contentProfile
 
     let body: string | undefined
     if (req.method !== 'GET' && req.method !== 'HEAD') {

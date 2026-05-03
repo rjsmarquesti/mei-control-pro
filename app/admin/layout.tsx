@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, CreditCard, Target,
-  Settings, LogOut, Menu, X, Shield,
+  Settings, LogOut, Menu, X, Shield, HeadphonesIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/hooks/useAuth'
@@ -14,15 +14,14 @@ import { signOut } from '@/hooks/useAuth'
 const nav = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/usuarios', icon: Users, label: 'Usuários' },
+  { href: '/admin/crm', icon: HeadphonesIcon, label: 'CRM / Suporte' },
   { href: '/admin/pagamentos', icon: CreditCard, label: 'Pagamentos' },
   { href: '/admin/leads', icon: Target, label: 'Leads' },
+  { href: '/admin/configuracoes', icon: Settings, label: 'Configurações' },
 ]
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  const SidebarContent = () => (
+function SidebarContent({ pathname, onClose }: { pathname: string; onClose: () => void }) {
+  return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
         <div className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
@@ -38,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {nav.map((item) => {
           const active = pathname === item.href
           return (
-            <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}>
+            <Link key={item.href} href={item.href} onClick={onClose}>
               <motion.div
                 whileTap={{ scale: 0.97 }}
                 className={cn(
@@ -73,13 +72,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
     </div>
   )
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-56 flex-col shrink-0"
         style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}>
-        <SidebarContent />
+        <SidebarContent pathname={pathname} onClose={() => setSidebarOpen(false)} />
       </aside>
 
       {/* Mobile overlay */}
@@ -95,7 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="lg:hidden fixed left-0 top-0 bottom-0 w-56 z-50 flex flex-col"
             style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}
           >
-            <SidebarContent />
+            <SidebarContent pathname={pathname} onClose={() => setSidebarOpen(false)} />
           </motion.aside>
         </>
       )}

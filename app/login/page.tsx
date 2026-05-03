@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Loader2, TrendingUp, Shield, BarChart3, User, Phone, MapPin, Sun, Moon } from 'lucide-react'
+import { Eye, EyeOff, Loader2, TrendingUp, Shield, BarChart3, User, Phone, MapPin, Sun, Moon, CheckCircle2, XCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -12,7 +12,6 @@ export default function LoginPage() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -22,6 +21,29 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [mode, setMode] = useState<'login' | 'register'>('login')
+
+  const [planoParam, setPlanoParam] = useState('')
+
+  useEffect(() => {
+    setMounted(true)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('cadastro') === '1') setMode('register')
+      const plano = params.get('plano') ?? ''
+      if (plano) setPlanoParam(plano)
+    }
+  }, [])
+
+  const checkPasswordStrength = (pwd: string) => {
+    const rules = [
+      { label: 'Mínimo 8 caracteres', pass: pwd.length >= 8 },
+      { label: 'Uma letra maiúscula', pass: /[A-Z]/.test(pwd) },
+      { label: 'Um número', pass: /[0-9]/.test(pwd) },
+      { label: 'Um símbolo (!@#$%^&*)', pass: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(pwd) },
+    ]
+    const score = rules.filter(r => r.pass).length
+    return { score, rules }
+  }
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -40,16 +62,31 @@ export default function LoginPage() {
         const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
 
-        // Redirect admin users to admin panel
-        const res = await fetch('/api/me/role', {
+        // Notificar usuário via WhatsApp (fire-and-forget, não bloqueia)
+        fetch('/api/auth/login-notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: authData.user!.id }),
+        }).catch(() => {})
+
+        // Redirect admin users to admin panel
+        const res = await fetch('/api/me/role', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authData.session!.access_token}` },
+          body: JSON.stringify({}),
         })
         const { role } = await res.json()
 
-        router.push(role === 'admin' ? '/admin' : '/dashboard')
+        const dest = role === 'admin' ? '/admin' : planoParam ? `/dashboard/assinatura?checkout=${planoParam}` : '/dashboard'
+        router.push(dest)
       } else {
+        const { score } = checkPasswordStrength(password)
+        if (score < 3) {
+          setError('Crie uma senha mais forte para proteger sua conta.')
+          setIsLoading(false)
+          return
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -63,7 +100,7 @@ export default function LoginPage() {
         if (data.user) {
           await fetch('/api/profiles/upsert', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` },
             body: JSON.stringify({ id: data.user.id, name, email, phone, city }),
           }).catch(() => {})
 
@@ -100,7 +137,7 @@ export default function LoginPage() {
             body: JSON.stringify({ name, email, phone, city }),
           }).catch(() => {})
         }
-        router.push('/dashboard/onboarding')
+        router.push(planoParam ? `/dashboard/assinatura?checkout=${planoParam}` : '/dashboard/onboarding')
       }
     } catch (err: any) {
       const msg = err.message ?? ''
@@ -266,7 +303,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={6}
+                  minLength={8}
                   className="input-field pr-10"
                 />
                 <button
@@ -277,6 +314,34 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+
+              {/* Indicador de força — só no cadastro */}
+              {mode === 'register' && password.length > 0 && (() => {
+                const { score, rules } = checkPasswordStrength(password)
+                const colors = ['#EF4444', '#EF4444', '#F59E0B', '#F59E0B', '#10B981']
+                const labels = ['Muito fraca', 'Fraca', 'Média', 'Boa', 'Forte']
+                return (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map(i => (
+                        <div key={i} className="h-1.5 flex-1 rounded-full transition-all"
+                          style={{ background: i < score ? colors[score] : 'hsl(var(--border))' }} />
+                      ))}
+                    </div>
+                    <p className="text-xs font-medium" style={{ color: colors[score] }}>{labels[score]}</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {rules.map(r => (
+                        <div key={r.label} className="flex items-center gap-1.5">
+                          {r.pass
+                            ? <CheckCircle2 size={11} className="text-emerald-400 shrink-0" />
+                            : <XCircle size={11} className="text-muted-foreground shrink-0" />}
+                          <span className={`text-[10px] ${r.pass ? 'text-emerald-400' : 'text-muted-foreground'}`}>{r.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
 
             {error && (

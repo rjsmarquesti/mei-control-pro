@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Logo Preview — MEI Control Pro</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #0A0A14; color: white; padding: 40px; }
+    h2 { color: #A78BFA; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; }
+    .row { display: flex; align-items: center; gap: 40px; margin-bottom: 48px; flex-wrap: wrap; }
+    .card { background: #12121F; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; display: flex; align-items: center; justify-content: center; }
+    .card.light { background: #F0F2F8; }
+    label { font-size: 11px; color: #6B7280; display: block; text-align: center; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <h2>Ícone quadrado</h2>
+  <div class="row">
+    <div>
+      <div class="card">
+        <img src="logo.svg" width="120" height="120" />
+      </div>
+      <label>120px — fundo escuro</label>
+    </div>
+    <div>
+      <div class="card">
+        <img src="logo.svg" width="80" height="80" />
+      </div>
+      <label>80px</label>
+    </div>
+    <div>
+      <div class="card">
+        <img src="logo.svg" width="48" height="48" />
+      </div>
+      <label>48px</label>
+    </div>
+    <div>
+      <div class="card light">
+        <img src="logo.svg" width="80" height="80" />
+      </div>
+      <label>fundo claro</label>
+    </div>
+  </div>
+
+  <h2>Versão horizontal</h2>
+  <div class="row">
+    <div>
+      <div class="card" style="padding: 24px 32px;">
+        <img src="logo-horizontal.svg" width="280" height="54" />
+      </div>
+      <label>fundo escuro</label>
+    </div>
+    <div>
+      <div class="card light" style="padding: 24px 32px;">
+        <img src="logo-horizontal.svg" width="280" height="54" />
+      </div>
+      <label>fundo claro</label>
+    </div>
+  </div>
+
+</body>
+</html>

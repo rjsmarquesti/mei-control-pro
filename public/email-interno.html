@@ -1,0 +1,179 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Novo Cadastro — MEI Control Pro</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f5f9;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0" border="0">
+
+          <!-- HEADER INTERNO -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%);border-radius:16px 16px 0 0;padding:24px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" width="40" height="40" style="display:block;">
+                      <defs>
+                        <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" style="stop-color:#7C3AED"/>
+                          <stop offset="100%" style="stop-color:#4F46E5"/>
+                        </linearGradient>
+                      </defs>
+                      <rect width="200" height="200" rx="40" fill="url(#g2)"/>
+                      <rect x="38" y="112" width="22" height="52" rx="6" fill="white" opacity="0.3"/>
+                      <rect x="68" y="88" width="22" height="76" rx="6" fill="white" opacity="0.5"/>
+                      <rect x="98" y="64" width="22" height="100" rx="6" fill="white" opacity="0.75"/>
+                      <rect x="128" y="44" width="22" height="120" rx="6" fill="white"/>
+                      <polyline points="49,108 79,84 109,60 139,40" stroke="#A78BFA" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      <circle cx="139" cy="40" r="6" fill="white"/>
+                    </svg>
+                  </td>
+                  <td style="padding-left:14px;vertical-align:middle;">
+                    <p style="margin:0;font-size:11px;font-weight:600;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;">MEI Control Pro · Interno</p>
+                    <h1 style="margin:4px 0 0;font-size:18px;font-weight:800;color:#ffffff;">🆕 Novo Cadastro Recebido</h1>
+                  </td>
+                  <td style="text-align:right;vertical-align:middle;">
+                    <span style="display:inline-block;background:#22c55e20;border:1px solid #22c55e50;color:#4ade80;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">ATIVO</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ALERTA -->
+          <tr>
+            <td style="background:#7c3aed;padding:12px 28px;">
+              <p style="margin:0;font-size:13px;color:#ede9fe;text-align:center;">
+                ⚡ Um novo usuário se cadastrou na plataforma — <strong style="color:#fff;">ação recomendada: contato em até 24h</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td style="background:#ffffff;padding:32px 28px;">
+
+              <!-- Dados do lead -->
+              <p style="margin:0 0 16px;font-size:12px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;">📋 Dados do novo usuário</p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:28px;">
+                <tr style="background:#f8f7ff;">
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;width:40%;">
+                    <span style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Nome</span>
+                  </td>
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
+                    <span style="font-size:14px;color:#1e1b4b;font-weight:700;">{{name}}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;background:#fafafa;">
+                    <span style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Email</span>
+                  </td>
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
+                    <a href="mailto:{{email}}" style="font-size:14px;color:#7c3aed;font-weight:600;text-decoration:none;">{{email}}</a>
+                  </td>
+                </tr>
+                <tr style="background:#f8f7ff;">
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
+                    <span style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Telefone</span>
+                  </td>
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
+                    <a href="https://wa.me/{{phoneWA}}" style="font-size:14px;color:#22c55e;font-weight:700;text-decoration:none;">📱 {{phone}}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;background:#fafafa;">
+                    <span style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Cidade</span>
+                  </td>
+                  <td style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
+                    <span style="font-size:14px;color:#1e1b4b;font-weight:600;">📍 {{city}}</span>
+                  </td>
+                </tr>
+                <tr style="background:#f8f7ff;">
+                  <td style="padding:14px 20px;">
+                    <span style="font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Plano</span>
+                  </td>
+                  <td style="padding:14px 20px;">
+                    <span style="display:inline-block;background:#e0e7ff;color:#4338ca;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;">Gratuito</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Ações rápidas -->
+              <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1px;">🚀 Ações rápidas</p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="padding-right:8px;" width="50%">
+                    <a href="https://wa.me/{{phoneWA}}?text=Ol%C3%A1%20{{name}}%2C%20aqui%20%C3%A9%20da%20equipe%20MEI%20Control%20Pro!%20Vimos%20que%20voc%C3%AA%20se%20cadastrou%20e%20gostar%C3%ADamos%20de%20te%20ajudar.%20Tem%20alguma%20d%C3%BAvida%3F"
+                       style="display:block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;">
+                      💬 Enviar WhatsApp
+                    </a>
+                  </td>
+                  <td style="padding-left:8px;" width="50%">
+                    <a href="https://app.sismeipro.com.br/admin/usuarios"
+                       style="display:block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;">
+                      👤 Ver no Admin
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Observação -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#c2410c;">💡 Oportunidade de conversão</p>
+                    <p style="margin:0;font-size:12px;color:#92400e;line-height:1.6;">
+                      Usuários contatados nas primeiras 24h têm <strong>3x mais chance de converter</strong> para um plano pago. Priorize este contato!
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- META -->
+          <tr>
+            <td style="background:#f8f7ff;border-top:1px solid #e2e8f0;padding:14px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <p style="margin:0;font-size:11px;color:#94a3b8;">
+                      🕐 Cadastro em: <strong style="color:#64748b;">{{datetime}}</strong>
+                    </p>
+                  </td>
+                  <td style="text-align:right;">
+                    <p style="margin:0;font-size:11px;color:#94a3b8;">Via: <strong style="color:#64748b;">app.sismeipro.com.br</strong></p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#1e1b4b;border-radius:0 0 16px 16px;padding:20px 28px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;color:#a78bfa;font-weight:600;">MEI Control Pro · Uso interno</p>
+              <p style="margin:0;font-size:11px;color:#6b7280;">
+                Este email foi enviado automaticamente para
+                <a href="mailto:comercial@sismeipro.com.br" style="color:#a78bfa;text-decoration:none;">comercial@sismeipro.com.br</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
+import CookieBanner from '@/components/ui/CookieBanner'
 import './globals.css'
 
 const inter = Inter({
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           disableTransitionOnChange={false}
         >
           {children}
+          <CookieBanner />
         </ThemeProvider>
       </body>
     </html>

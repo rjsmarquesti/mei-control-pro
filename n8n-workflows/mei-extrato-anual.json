@@ -1,0 +1,154 @@
+{
+  "name": "mei-extrato-anual",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 9 1 1 *" },
+            { "field": "cronExpression", "expression": "0 9 15 3 *" }
+          ]
+        }
+      },
+      "id": "cron-anual",
+      "name": "Cron Jan 1 e Mar 15 às 9h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.sismeipro.com.br/api/reports/annual-summary",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-n8n-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": { "parameters": [] },
+        "options": { "timeout": 120000 }
+      },
+      "id": "buscar-resumo-anual",
+      "name": "Buscar Resumo Anual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "id": "split-usuarios",
+      "name": "Split por Usuário",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const u = $input.first().json;\n\nconst alertas = [];\nif (u.excedeu_limite) alertas.push(`🚨 *ATENÇÃO:* Você *ultrapassou o limite MEI* de R$ 81.000! Consulte um contador.`);\nelse if (u.percentual_limite >= 75) alertas.push(`⚠️ Você usou *${u.percentual_limite}%* do limite MEI anual.`);\nif (u.das_pendentes_count > 0) alertas.push(`🔴 *${u.das_pendentes_count} DAS pendente(s)* no ano. Regularize para evitar multas.`);\nif (u.lucro_positivo === false) alertas.push(`📉 Resultado anual *negativo*. Revise suas despesas.`);\nif (u.meses_sem_lancamentos && u.meses_sem_lancamentos.length >= 3) alertas.push(`📝 *${u.meses_sem_lancamentos.length} meses* sem lançamentos. Mantenha o controle em dia!`);\n\nconst alertasTexto = alertas.length > 0 ? '\\n\\n' + alertas.join('\\n') : '';\n\nconst irpfTexto = u.irpf_isento\n  ? `✅ Dentro do limite MEI (isento de IR sobre a atividade)`\n  : `⚠️ Limite MEI ultrapassado — valor tributável: *${u.irpf_valor_tributavel_fmt}*`;\n\nconst mensagem = `📋 *Extrato Anual MEI Control Pro*\\n*Ano ${u.ano}*\\n\\n💰 Receita total: *${u.receita_anual_fmt}*\\n💸 Despesas: *${u.despesas_anuais_fmt}*\\n📈 Lucro: *${u.lucro_anual_fmt}* ${u.lucro_positivo ? '✅' : '🔴'}\\n🧾 DAS pago: *${u.das_pago_fmt}*\\n📊 Limite MEI utilizado: *${u.percentual_limite}%*\\n\\n📝 *IRPF ${Number(u.ano) + 1}*\\n${irpfTexto}\\n📅 Prazo DASN-SIMEI: *${u.irpf_prazo}*${alertasTexto}\\n\\n🔗 Acessar: https://app.sismeipro.com.br`;\n\nreturn [{ json: { ...u, mensagem } }];"
+      },
+      "id": "montar-mensagem",
+      "name": "Montar Mensagem Anual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "has-phone",
+              "leftValue": "={{ $json.hasPhone }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equal" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-tem-phone",
+      "name": "Tem WhatsApp?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.divulgabr.com.br/message/sendText/sismei",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "number", "value": "={{ $json.phoneWA }}" },
+            { "name": "text", "value": "={{ $json.mensagem }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "enviar-whatsapp",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 180],
+      "credentials": {
+        "httpHeaderAuth": { "id": "evolution-api-key", "name": "Evolution API Key" }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "suporte@sismeipro.com.br",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=Seu Extrato Anual MEI Control Pro — {{ $json.ano }}",
+        "emailType": "html",
+        "message": "=<div style=\"font-family:sans-serif;background:#0b0b18;color:#e0e0e0;padding:32px;border-radius:12px;max-width:600px;margin:auto\">\n  <div style=\"background:linear-gradient(135deg,#1e0840,#0d1b3e);border-radius:10px;padding:24px 32px;margin-bottom:24px\">\n    <div style=\"border-bottom:3px solid;border-image:linear-gradient(90deg,#7C3AED,#06B6D4) 1;padding-bottom:12px;margin-bottom:16px\"></div>\n    <h1 style=\"margin:0;font-size:22px;color:#fff\">📋 Extrato Anual</h1>\n    <p style=\"margin:4px 0 0;color:#a78bfa;font-size:14px\">Ano {{ $json.ano }}</p>\n  </div>\n  <p style=\"color:#c4c4d4\">Olá, <strong>{{ $json.nome }}</strong>! Aqui está o consolidado do seu ano como MEI:</p>\n  <table style=\"width:100%;border-collapse:collapse;margin:20px 0\">\n    <tr style=\"border-bottom:1px solid #2a2a3e\"><td style=\"padding:12px 8px;color:#a0a0b4\">💰 Receita Total</td><td style=\"padding:12px 8px;text-align:right;font-weight:bold;color:#10B981\">{{ $json.receita_anual_fmt }}</td></tr>\n    <tr style=\"border-bottom:1px solid #2a2a3e\"><td style=\"padding:12px 8px;color:#a0a0b4\">💸 Despesas</td><td style=\"padding:12px 8px;text-align:right;font-weight:bold;color:#EF4444\">{{ $json.despesas_anuais_fmt }}</td></tr>\n    <tr style=\"border-bottom:1px solid #2a2a3e\"><td style=\"padding:12px 8px;color:#a0a0b4\">📈 Lucro Anual</td><td style=\"padding:12px 8px;text-align:right;font-weight:bold\">{{ $json.lucro_anual_fmt }}</td></tr>\n    <tr style=\"border-bottom:1px solid #2a2a3e\"><td style=\"padding:12px 8px;color:#a0a0b4\">🧾 DAS Pago</td><td style=\"padding:12px 8px;text-align:right;color:#06B6D4\">{{ $json.das_pago_fmt }}</td></tr>\n    <tr style=\"border-bottom:1px solid #2a2a3e\"><td style=\"padding:12px 8px;color:#a0a0b4\">📊 Limite MEI utilizado</td><td style=\"padding:12px 8px;text-align:right\">{{ $json.percentual_limite }}%</td></tr>\n    <tr><td style=\"padding:12px 8px;color:#a0a0b4\">📝 Situação IRPF</td><td style=\"padding:12px 8px;text-align:right;color:#a78bfa\">{{ $json.irpf_isento ? 'Isento' : 'Verificar com contador' }}</td></tr>\n  </table>\n  <div style=\"background:#12121f;border-radius:8px;padding:16px;margin:16px 0;border-left:4px solid #7C3AED\">\n    <p style=\"margin:0;font-size:13px;color:#c4c4d4\">⚠️ O prazo para entrega da DASN-SIMEI é <strong>{{ $json.irpf_prazo }}</strong>. Não perca o prazo!</p>\n  </div>\n  <div style=\"text-align:center;margin-top:28px\">\n    <a href=\"https://app.sismeipro.com.br/dashboard/irpf\" style=\"background:linear-gradient(135deg,#7C3AED,#4F46E5);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;display:inline-block\">Ver Relatório IRPF</a>\n  </div>\n  <p style=\"font-size:11px;color:#555;text-align:center;margin-top:24px\">MEI Control Pro · CNPJ 50.406.025/0001-68 · suporte@sismeipro.com.br</p>\n</div>",
+        "options": {}
+      },
+      "id": "enviar-email",
+      "name": "Enviar Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1340, 420],
+      "credentials": {
+        "smtp": { "id": "f0odLFtQ36i26f5L", "name": "SMTP Sismei" }
+      }
+    }
+  ],
+  "connections": {
+    "Cron Jan 1 e Mar 15 às 9h": {
+      "main": [[{ "node": "Buscar Resumo Anual", "type": "main", "index": 0 }]]
+    },
+    "Buscar Resumo Anual": {
+      "main": [[{ "node": "Split por Usuário", "type": "main", "index": 0 }]]
+    },
+    "Split por Usuário": {
+      "main": [[{ "node": "Montar Mensagem Anual", "type": "main", "index": 0 }]]
+    },
+    "Montar Mensagem Anual": {
+      "main": [[{ "node": "Tem WhatsApp?", "type": "main", "index": 0 }]]
+    },
+    "Tem WhatsApp?": {
+      "main": [
+        [{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }],
+        [{ "node": "Enviar Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Enviar WhatsApp": {
+      "main": [[{ "node": "Enviar Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "sismei" }],
+  "triggerCount": 1,
+  "active": true
+}

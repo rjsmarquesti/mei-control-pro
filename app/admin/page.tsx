@@ -17,35 +17,29 @@ interface Stats {
 }
 
 export default function AdminPage() {
-  const { isAdmin, loading } = useAdmin()
+  const { isAdmin, loading, token } = useAdmin()
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, activeUsers: 0, blockedUsers: 0, totalLeads: 0, newLeads: 0, paidUsers: 0 })
   const [recentUsers, setRecentUsers] = useState<any[]>([])
   const [recentLeads, setRecentLeads] = useState<any[]>([])
 
   useEffect(() => {
-    if (!isAdmin) return
+    if (!isAdmin || !token) return
     loadData()
-  }, [isAdmin])
+  }, [isAdmin, token])
+
+  const af = (url: string, init?: RequestInit) =>
+    fetch(url, { ...init, headers: { ...(init?.headers as object), Authorization: `Bearer ${token ?? ''}` } })
 
   const loadData = async () => {
-    const [usersRes, leadsRes] = await Promise.all([
-      supabase.from('profiles').select('*').order('updated_at', { ascending: false }),
-      supabase.from('leads').select('*').order('created_at', { ascending: false }).limit(5),
+    const [statsRes, usersRes, leadsRes] = await Promise.all([
+      af('/api/admin/stats').then(r => r.json()),
+      af('/api/admin/users').then(r => r.json()),
+      af('/api/admin/leads').then(r => r.json()),
     ])
 
-    const users = usersRes.data ?? []
-    const leads = leadsRes.data ?? []
-
-    setStats({
-      totalUsers: users.length,
-      activeUsers: users.filter(u => u.status !== 'blocked' && u.status !== 'suspended').length,
-      blockedUsers: users.filter(u => u.status === 'blocked' || u.status === 'suspended').length,
-      totalLeads: leads.length,
-      newLeads: leads.filter(l => l.status === 'novo').length,
-      paidUsers: users.filter(u => u.subscription_plan !== 'free').length,
-    })
-    setRecentUsers(users.slice(0, 5))
-    setRecentLeads(leads)
+    setStats(statsRes)
+    setRecentUsers((usersRes ?? []).slice(0, 5))
+    setRecentLeads((leadsRes ?? []).slice(0, 5))
   }
 
   if (loading) return (

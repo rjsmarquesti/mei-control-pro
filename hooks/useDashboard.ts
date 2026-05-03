@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { financeService } from '@/services/finance'
 
@@ -11,6 +11,7 @@ export function useDashboard() {
     chartData,
     categoryData,
     isLoading,
+    refreshKey,
     setMetrics,
     setTransactions,
     setChartData,
@@ -18,9 +19,14 @@ export function useDashboard() {
     setLoading,
   } = useAppStore()
 
+  const isFirstLoad = useRef(true)
+
   useEffect(() => {
     async function loadDashboard() {
-      setLoading(true)
+      if (isFirstLoad.current) {
+        setLoading(true)
+        isFirstLoad.current = false
+      }
       try {
         const [metricsData, transactionsData, chartDataResult, categoryDataResult] =
           await Promise.all([
@@ -41,7 +47,7 @@ export function useDashboard() {
 
     loadDashboard()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [refreshKey])
 
   return { metrics, transactions, chartData, categoryData, isLoading }
 }

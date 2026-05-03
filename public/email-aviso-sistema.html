@@ -1,0 +1,106 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aviso importante — MEI Control Pro</title>
+</head>
+<body style="margin:0;padding:0;background:#0b0b18;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0b0b18;padding:40px 16px;">
+  <tr><td align="center">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;">
+
+    <!-- HEADER -->
+    <tr><td style="background:linear-gradient(135deg,#1e0840 0%,#0d1b3e 100%);border-radius:20px 20px 0 0;padding:36px 40px 28px;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="48" valign="middle">
+            <img src="https://app.sismeipro.com.br/logo.webp" width="44" height="44" alt="" style="border-radius:10px;display:block;"/>
+          </td>
+          <td valign="middle" style="padding-left:12px;">
+            <div style="color:#fff;font-size:18px;font-weight:700;letter-spacing:-0.3px;">MEI Control Pro</div>
+            <div style="color:#a78bfa;font-size:12px;margin-top:2px;">Gestão Financeira para MEI</div>
+          </td>
+          <td align="right" valign="middle">
+            <!-- Tipo do aviso — trocar emoji/cor conforme necessidade -->
+            <div style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:20px;padding:5px 14px;display:inline-block;">
+              <span style="color:#fbbf24;font-size:12px;font-weight:600;">{{tipo_aviso}}</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <div style="height:3px;background:linear-gradient(90deg,#7C3AED,#06B6D4);border-radius:2px;margin-top:24px;"></div>
+    </td></tr>
+
+    <!-- BODY -->
+    <tr><td style="background:#12121f;padding:40px 40px 32px;border-left:1px solid rgba(255,255,255,0.06);border-right:1px solid rgba(255,255,255,0.06);">
+      <div align="center" style="margin-bottom:24px;">
+        <!-- Trocar o emoji conforme o tipo de aviso: ⚠️ alerta, 🔔 notificação, 📢 comunicado, 🛠 manutenção -->
+        <div style="display:inline-block;background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(234,179,8,0.08));border:1px solid rgba(245,158,11,0.3);border-radius:50%;width:72px;height:72px;line-height:72px;text-align:center;font-size:32px;">{{icone}}</div>
+      </div>
+
+      <h1 style="color:#fff;font-size:22px;font-weight:700;text-align:center;margin:0 0 8px;letter-spacing:-0.3px;">{{titulo}}</h1>
+      <p style="color:#9ca3c8;font-size:14px;line-height:1.7;text-align:center;margin:0 0 28px;">
+        Olá, <strong style="color:#e5e7eb;">{{nome}}</strong>!
+      </p>
+
+      <!-- MENSAGEM PRINCIPAL -->
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:24px;margin-bottom:28px;">
+        <p style="color:#d1d5db;font-size:14px;line-height:1.8;margin:0;">
+          {{mensagem}}
+        </p>
+      </div>
+
+      <!-- DETALHES (opcional — remover se não usar) -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+        <tr>
+          <td style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15);border-radius:10px;padding:14px 18px;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding:4px 0;">
+                  <span style="color:#6b7280;font-size:12px;">📅 Data:</span>
+                  <span style="color:#c4b5fd;font-size:12px;margin-left:8px;font-weight:600;">{{data}}</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:4px 0;">
+                  <span style="color:#6b7280;font-size:12px;">📌 Referência:</span>
+                  <span style="color:#c4b5fd;font-size:12px;margin-left:8px;font-weight:600;">{{referencia}}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- CTA (opcional) -->
+      <div align="center">
+        <a href="{{link_acao}}" style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#4F46E5);color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:13px 36px;border-radius:12px;box-shadow:0 4px 20px rgba(124,58,237,0.35);">
+          {{texto_botao}}
+        </a>
+      </div>
+    </td></tr>
+
+    <!-- SUPORTE -->
+    <tr><td style="background:#0f0f1c;padding:20px 40px;border-left:1px solid rgba(255,255,255,0.06);border-right:1px solid rgba(255,255,255,0.06);">
+      <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:20px;text-align:center;">
+        <p style="color:#4b5563;font-size:12px;line-height:1.7;margin:0;">
+          Precisa de ajuda? Nossa equipe está disponível em<br/>
+          <a href="mailto:suporte@sismeipro.com.br" style="color:#7C3AED;text-decoration:none;font-weight:600;">suporte@sismeipro.com.br</a>
+        </p>
+      </div>
+    </td></tr>
+
+    <!-- FOOTER -->
+    <tr><td style="background:#0b0b18;border:1px solid rgba(255,255,255,0.06);border-top:none;border-radius:0 0 20px 20px;padding:24px 40px;">
+      <p style="color:#374151;font-size:11px;text-align:center;line-height:1.7;margin:0;">
+        Você recebeu este email por ser usuário do MEI Control Pro.<br/>
+        © 2025 MEI Control Pro · Todos os direitos reservados
+      </p>
+    </td></tr>
+
+  </table>
+  </td></tr>
+</table>
+</body>
+</html>

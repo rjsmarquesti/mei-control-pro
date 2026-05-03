@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { RefreshCw, Search, CheckCircle, XCircle, Calendar } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { RefreshCw, Search, CheckCircle, XCircle, Calendar, AlertCircle } from 'lucide-react'
 import { useAdmin } from '@/hooks/useAdmin'
 
 interface UserPayment {
@@ -29,18 +28,22 @@ const planColor = (plan: string) => {
 }
 
 export default function PagamentosPage() {
-  const { isAdmin, loading } = useAdmin()
+  const { isAdmin, loading, token } = useAdmin()
   const [users, setUsers] = useState<UserPayment[]>([])
   const [filtered, setFiltered] = useState<UserPayment[]>([])
   const [search, setSearch] = useState('')
   const [loadingData, setLoadingData] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [filterPlan, setFilterPlan] = useState('all')
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+
+  const af = (url: string, init?: RequestInit) =>
+    fetch(url, { ...init, headers: { ...(init?.headers as object), Authorization: `Bearer ${token ?? ''}` } })
 
   useEffect(() => {
-    if (!isAdmin) return
+    if (!isAdmin || !token) return
     loadData()
-  }, [isAdmin])
+  }, [isAdmin, token])
 
   useEffect(() => {
     let result = users
@@ -59,27 +62,42 @@ export default function PagamentosPage() {
 
   const loadData = async () => {
     setLoadingData(true)
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, name, email, phone, city, subscription_plan, subscription_expires_at, status, updated_at')
-      .order('updated_at', { ascending: false })
-    setUsers(data ?? [])
-    setFiltered(data ?? [])
-    setLoadingData(false)
+    try {
+      const data = await af('/api/admin/users').then(r => r.json())
+      const list = Array.isArray(data) ? data : []
+      setUsers(list)
+      setFiltered(list)
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  const showToast = (msg: string, ok: boolean) => {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 3000)
   }
 
   const updatePlan = async (id: string, plan: string) => {
     setActionLoading(id)
     const expires = plan === 'free' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    await supabase.from('profiles').update({
-      subscription_plan: plan,
-      subscription_expires_at: expires,
-    }).eq('id', id)
-    setUsers(prev => prev.map(u => u.id === id
-      ? { ...u, subscription_plan: plan, subscription_expires_at: expires }
-      : u
-    ))
-    setActionLoading(null)
+    try {
+      const res = await af('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, subscription_plan: plan, subscription_expires_at: expires }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erro desconhecido')
+      setUsers(prev => prev.map(u => u.id === id
+        ? { ...u, subscription_plan: plan, subscription_expires_at: expires }
+        : u
+      ))
+      showToast(`Plano alterado para ${plan}`, true)
+    } catch (e: any) {
+      showToast(`Falha: ${e.message}`, false)
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   const extendPlan = async (id: string) => {
@@ -88,12 +106,24 @@ export default function PagamentosPage() {
     const base = user?.subscription_expires_at ? new Date(user.subscription_expires_at) : new Date()
     if (base < new Date()) base.setTime(Date.now())
     base.setDate(base.getDate() + 30)
-    await supabase.from('profiles').update({ subscription_expires_at: base.toISOString() }).eq('id', id)
-    setUsers(prev => prev.map(u => u.id === id
-      ? { ...u, subscription_expires_at: base.toISOString() }
-      : u
-    ))
-    setActionLoading(null)
+    try {
+      const res = await af('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, subscription_expires_at: base.toISOString() }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erro desconhecido')
+      setUsers(prev => prev.map(u => u.id === id
+        ? { ...u, subscription_expires_at: base.toISOString() }
+        : u
+      ))
+      showToast('+30 dias adicionados', true)
+    } catch (e: any) {
+      showToast(`Falha: ${e.message}`, false)
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   const formatDate = (d: string | null) => {
@@ -192,12 +222,9 @@ export default function PagamentosPage() {
                   <td colSpan={4} className="text-center py-12 text-slate-500 text-xs">Nenhum resultado</td>
                 </tr>
               )}
-              {filtered.map((u, i) => (
-                <motion.tr
+              {filtered.map((u) => (
+                <tr
                   key={u.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
                   className="border-b border-white/5 hover:bg-white/5 transition-colors"
                 >
                   <td className="px-4 py-3">
@@ -242,12 +269,19 @@ export default function PagamentosPage() {
                       )}
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium shadow-lg ${toast.ok ? 'bg-emerald-500/90 text-white' : 'bg-red-500/90 text-white'}`}>
+          {toast.ok ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+          {toast.msg}
+        </div>
+      )}
     </div>
   )
 }

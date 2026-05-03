@@ -1,31 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { financeService } from '@/services/finance'
+import { supabase } from '@/lib/supabase'
 import type { Transaction } from '@/types'
 
-const CATEGORIES_REVENUE = ['Serviços', 'Consultoria', 'Projetos', 'Vendas', 'Outros']
-const CATEGORIES_EXPENSE = ['Infraestrutura', 'Material', 'Tecnologia', 'Marketing', 'Impostos', 'Outros']
+const FALLBACK_REVENUE = ['Serviços', 'Consultoria', 'Projetos', 'Vendas', 'Outros']
+const FALLBACK_EXPENSE = ['Infraestrutura', 'Material', 'Tecnologia', 'Marketing', 'Impostos', 'Outros']
 
 interface TransactionFormProps {
   type: 'revenue' | 'expense'
+  initialData?: Transaction
   onSuccess: (tx: Transaction) => void
   onCancel: () => void
 }
 
-export function TransactionForm({ type, onSuccess, onCancel }: TransactionFormProps) {
+export function TransactionForm({ type, initialData, onSuccess, onCancel }: TransactionFormProps) {
   const [form, setForm] = useState({
-    description: '',
-    value: '',
-    category: '',
-    date: new Date().toISOString().split('T')[0],
-    status: 'completed' as Transaction['status'],
+    description: initialData?.description ?? '',
+    value: initialData?.value?.toString() ?? '',
+    category: initialData?.category ?? '',
+    date: initialData?.date ?? new Date().toISOString().split('T')[0],
+    status: (initialData?.status ?? 'completed') as Transaction['status'],
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [categories, setCategories] = useState<string[]>(
+    type === 'revenue' ? FALLBACK_REVENUE : FALLBACK_EXPENSE
+  )
 
-  const categories = type === 'revenue' ? CATEGORIES_REVENUE : CATEGORIES_EXPENSE
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      supabase
+        .from('categories')
+        .select('name')
+        .eq('user_id', session.user.id)
+        .eq('type', type)
+        .order('created_at')
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const userNames = data.map((c) => c.name)
+            const fallback = type === 'revenue' ? FALLBACK_REVENUE : FALLBACK_EXPENSE
+            // user categories first, then fallback items not already present
+            const merged = [...userNames, ...fallback.filter((f) => !userNames.includes(f))]
+            setCategories(merged)
+          }
+        })
+    })
+  }, [type])
+
+  const isEditing = !!initialData
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,9 +63,11 @@ export function TransactionForm({ type, onSuccess, onCancel }: TransactionFormPr
     setError('')
     try {
       const payload = { ...form, value: parseFloat(form.value), type }
-      const tx = type === 'revenue'
-        ? await financeService.createRevenue(payload)
-        : await financeService.createExpense(payload)
+      const tx = isEditing
+        ? await financeService.updateTransaction(initialData.id, payload)
+        : type === 'revenue'
+          ? await financeService.createRevenue(payload)
+          : await financeService.createExpense(payload)
       onSuccess(tx)
     } catch {
       setError('Erro ao salvar. Tente novamente.')
@@ -116,7 +144,7 @@ export function TransactionForm({ type, onSuccess, onCancel }: TransactionFormPr
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel} className="btn-outline flex-1">Cancelar</button>
         <button type="submit" disabled={isLoading} className="btn-primary flex-1">
-          {isLoading ? <><Loader2 size={15} className="animate-spin" /> Salvando...</> : 'Salvar'}
+          {isLoading ? <><Loader2 size={15} className="animate-spin" /> Salvando...</> : isEditing ? 'Salvar alterações' : 'Salvar'}
         </button>
       </div>
     </form>

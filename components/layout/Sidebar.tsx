@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, TrendingUp, ArrowDownLeft, ArrowUpRight,
   BarChart3, FileText, Receipt, Tag, CreditCard, User,
-  ChevronRight, Lock, Sparkles,
+  ChevronRight, Lock, Sparkles, LineChart,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { usePlan } from '@/hooks/usePlan'
@@ -18,10 +19,11 @@ const navItems: { href: string; icon: any; label: string; badge?: string; requir
   { href: '/dashboard/financeiro',   icon: TrendingUp,      label: 'Financeiro',     requiredPlan: 'basic' },
   { href: '/dashboard/receitas',     icon: ArrowDownLeft,   label: 'Receitas',       requiredPlan: 'free' },
   { href: '/dashboard/despesas',     icon: ArrowUpRight,    label: 'Despesas',       requiredPlan: 'free' },
-  { href: '/dashboard/relatorios',   icon: BarChart3,       label: 'Relatórios',     requiredPlan: 'pro' },
-  { href: '/dashboard/irpf',         icon: FileText,        label: 'IRPF Anual',     requiredPlan: 'premium', badge: 'NOVO' },
-  { href: '/dashboard/das',          icon: Receipt,         label: 'DAS & Impostos', requiredPlan: 'pro' },
-  { href: '/dashboard/categorias',   icon: Tag,             label: 'Categorias',     requiredPlan: 'basic' },
+  { href: '/dashboard/relatorios',            icon: BarChart3,  label: 'Relatórios',          requiredPlan: 'pro' },
+  { href: '/dashboard/relatorios-avancados', icon: LineChart,  label: 'Rel. Avançados', requiredPlan: 'pro', badge: 'PRO' },
+  { href: '/dashboard/irpf',          icon: FileText,  label: 'IRPF Anual',          requiredPlan: 'premium',       badge: 'NOVO' },
+  { href: '/dashboard/das',           icon: Receipt,   label: 'DAS & Impostos',      requiredPlan: 'pro' },
+  { href: '/dashboard/categorias',    icon: Tag,       label: 'Categorias',          requiredPlan: 'basic' },
 ]
 
 const bottomItems: { href: string; icon: any; label: string; requiredPlan: Plan }[] = [
@@ -30,16 +32,16 @@ const bottomItems: { href: string; icon: any; label: string; requiredPlan: Plan 
 ]
 
 const PLAN_COLOR: Record<Plan, string> = {
-  free: '#6B7280',
-  basic: '#06B6D4',
-  pro: '#7C3AED',
+  free:    '#6B7280',
+  basic:   '#06B6D4',
+  pro:     '#7C3AED',
   premium: '#F59E0B',
 }
 
 const PLAN_LABEL: Record<Plan, string> = {
-  free: 'Gratuito',
-  basic: 'Basic',
-  pro: 'Pro',
+  free:    'Gratuito',
+  basic:   'Basic',
+  pro:     'Pro',
   premium: 'Premium',
 }
 
@@ -58,12 +60,7 @@ export function Sidebar() {
           {brandSettings.logo ? (
             <img src={brandSettings.logo} alt="Logo" className="h-9 w-9 rounded-xl object-cover" />
           ) : (
-            <div
-              className="h-9 w-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-              style={{ background: `linear-gradient(135deg, ${brandSettings.primaryColor}, color-mix(in srgb, ${brandSettings.primaryColor} 70%, #06B6D4))` }}
-            >
-              {brandSettings.companyName.charAt(0)}
-            </div>
+            <Image src="/logo.svg" alt="MEI Control Pro" width={36} height={36} className="rounded-xl" />
           )}
           <div className="min-w-0">
             <p className="text-sm font-bold text-foreground truncate">{brandSettings.companyName}</p>

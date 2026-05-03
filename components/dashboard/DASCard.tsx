@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Receipt, Calendar, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
+import { Receipt, Calendar, ExternalLink } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
 import { Skeleton } from '@/components/ui/SkeletonCard'
+
+const DAS_GOV_URL = 'https://www.gov.br/pt-br/servicos/emitir-das-para-pagamento-de-tributos-do-mei'
 
 interface DASCardProps {
   value: number
@@ -15,8 +16,6 @@ interface DASCardProps {
 
 export function DASCard({ value, dueDate, isLoading }: DASCardProps) {
   const { brandSettings } = useAppStore()
-  const [isPaying, setIsPaying] = useState(false)
-  const [isPaid, setIsPaid] = useState(false)
 
   const hasDueDate = !!dueDate
   const dueDateObj = hasDueDate ? new Date(dueDate + 'T00:00:00') : null
@@ -24,13 +23,6 @@ export function DASCard({ value, dueDate, isLoading }: DASCardProps) {
   const daysUntilDue = dueDateObj ? Math.ceil((dueDateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null
   const isOverdue = daysUntilDue !== null && daysUntilDue < 0
   const isUrgent = daysUntilDue !== null && daysUntilDue >= 0 && daysUntilDue <= 5
-
-  const handlePay = async () => {
-    setIsPaying(true)
-    await new Promise((r) => setTimeout(r, 1500))
-    setIsPaying(false)
-    setIsPaid(true)
-  }
 
   if (isLoading) {
     return (
@@ -64,55 +56,39 @@ export function DASCard({ value, dueDate, isLoading }: DASCardProps) {
           <Receipt size={16} style={{ color: brandSettings.primaryColor }} />
         </div>
         <span className="text-sm font-bold text-foreground">Próximo DAS</span>
-        {(isOverdue || isUrgent) && !isPaid && (
+        {(isOverdue || isUrgent) && (
           <span className={`ml-auto text-[11px] font-bold px-2 py-0.5 rounded-lg ${isOverdue ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
             {isOverdue ? 'Vencido' : `${daysUntilDue}d`}
           </span>
         )}
-        {isPaid && (
-          <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400">
-            Pago ✓
-          </span>
-        )}
       </div>
 
-      {isPaid ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center py-3 gap-2"
+      <>
+        <p className="text-3xl font-bold text-foreground tracking-tight mb-1">
+          {formatCurrency(value)}
+        </p>
+
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
+          <Calendar size={12} />
+          <span>{hasDueDate ? `Vencimento: ${formatDate(dueDate)}` : 'Sem DAS pendente'}</span>
+        </div>
+
+        <a
+          href={DAS_GOV_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-95 hover:opacity-90"
+          style={{
+            background: `linear-gradient(135deg, ${brandSettings.primaryColor}, color-mix(in srgb, ${brandSettings.primaryColor} 70%, #06B6D4))`,
+            boxShadow: `0 4px 16px color-mix(in srgb, ${brandSettings.primaryColor} 35%, transparent)`,
+          }}
         >
-          <CheckCircle2 size={36} className="text-emerald-400" />
-          <p className="text-sm font-semibold text-emerald-400">DAS pago com sucesso!</p>
-        </motion.div>
-      ) : (
-        <>
-          <p className="text-3xl font-bold text-foreground tracking-tight mb-1">
-            {formatCurrency(value)}
-          </p>
-
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
-            <Calendar size={12} />
-            <span>{hasDueDate ? `Vencimento: ${formatDate(dueDate)}` : 'Sem DAS pendente'}</span>
-          </div>
-
-          <button
-            onClick={handlePay}
-            disabled={isPaying}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white transition-all duration-200 active:scale-95 disabled:opacity-70"
-            style={{
-              background: `linear-gradient(135deg, ${brandSettings.primaryColor}, color-mix(in srgb, ${brandSettings.primaryColor} 70%, #06B6D4))`,
-              boxShadow: `0 4px 16px color-mix(in srgb, ${brandSettings.primaryColor} 35%, transparent)`,
-            }}
-          >
-            {isPaying ? (
-              <><Loader2 size={15} className="animate-spin" /> Processando...</>
-            ) : (
-              <>Pagar agora <ArrowRight size={15} /></>
-            )}
-          </button>
-        </>
-      )}
+          Emitir DAS no gov.br <ExternalLink size={14} />
+        </a>
+        <p className="text-[10px] text-muted-foreground text-center mt-2">
+          O pagamento é feito diretamente no portal oficial
+        </p>
+      </>
     </motion.div>
   )
 }

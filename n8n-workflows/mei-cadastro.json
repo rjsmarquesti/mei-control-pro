@@ -1,0 +1,202 @@
+﻿{
+  "name": "MEI Control Pro - Confirmação de Cadastro",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mei-cadastro",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1008, 0],
+      "id": "webhook-cadastro",
+      "name": "Webhook Cadastro",
+      "webhookId": "7cf17fd6-c981-45fb-a866-8436a4d1aa30"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\nconst d = (raw.body && raw.body.email) ? raw.body : raw;\nconst phone = (d.phone || '').replace(/\\D/g, '');\nconst phoneWA = phone.length === 11 ? '55' + phone : phone.length === 13 ? phone : phone.length > 8 ? '55' + phone : '';\nconst now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });\nconsole.log('raw keys:', Object.keys(raw));\nconsole.log('email encontrado:', d.email);\nreturn [{ json: { name: d.name || 'Usuário', email: d.email || '', phone: phone || 'Não informado', phoneWA, city: d.city || 'Não informada', hasPhone: phoneWA.length >= 12, datetime: now }}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-768, 0],
+      "id": "format-data",
+      "name": "Formatar Dados"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.hasPhone }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-528, -160],
+      "id": "check-phone",
+      "name": "Tem Telefone?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.divulgabr.com.br/message/sendText/sismei",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "9015A0349CE0-4C04-B429-4A0FA18BCE96"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"number\": \"{{ $json.phoneWA }}\", \"text\": \"🎉 *Bem-vindo(a) ao MEI Control Pro!*\\n\\nOlá, *{{ $json.name }}*! Seu cadastro foi realizado com sucesso.\\n\\n📧 *E-mail cadastrado:* {{ $json.email }}\\n📱 *Telefone:* {{ $json.phone }}\\n\\n⚠️ *Ação necessária:* Para ativar sua conta, confirme seu e-mail clicando no link que foi enviado para *{{ $json.email }}*.\\n\\nApós a confirmação, você terá acesso completo ao sistema para gerenciar suas finanças como MEI.\\n\\nQualquer dúvida, estamos à disposição! 😊\\n\\n🔗 https://app.sismeipro.com.br\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-288, -256],
+      "id": "send-whatsapp",
+      "name": "Enviar WhatsApp"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.divulgabr.com.br/message/sendText/sismei",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "9015A0349CE0-4C04-B429-4A0FA18BCE96"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"number\": \"5561996050658\", \"text\": \"📲 *Novo cadastro MEI Control Pro!*\\n👤 {{ $json.name }}\\n📧 {{ $json.email }}\\n📱 {{ $json.phone }}\\n📍 {{ $json.city }}\\n🕐 {{ $json.datetime }}\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-528, 48],
+      "id": "notify-admin",
+      "name": "Notificar Admin WA"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-528, 208],
+      "id": "prep-email",
+      "name": "Preparar Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "suporte@sismeipro.com.br",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=✅ Bem-vindo ao MEI Control Pro, {{ $json.name }}!",
+        "html": "=<!DOCTYPE html><html><body style='margin:0;padding:0;background:#0f0f1a;font-family:Segoe UI,Arial,sans-serif;'><table width='100%' cellpadding='0' cellspacing='0'><tr><td align='center' style='padding:40px 16px;'><table style='max-width:560px;width:100%;' cellpadding='0' cellspacing='0'><tr><td align='center' style='background:linear-gradient(135deg,#1a0533,#0d1b3e);border-radius:20px 20px 0 0;padding:40px 32px;'><h1 style='margin:0 0 6px;font-size:26px;font-weight:800;color:#fff;'>MEI Control Pro</h1><p style='margin:0;font-size:14px;color:#a78bfa;'>Gestão financeira inteligente para MEI</p></td></tr><tr><td style='background:#fff;padding:40px 32px;'><h2 style='margin:0 0 12px;font-size:22px;color:#1e1b4b;'>Olá, {{ $json.name }}! 🎉</h2><p style='margin:0 0 20px;font-size:15px;color:#475569;line-height:1.7;'>Seu cadastro foi <strong style='color:#7c3aed;'>realizado com sucesso</strong>.</p><table width='100%' cellpadding='0' cellspacing='0' style='background:#f8f7ff;border-radius:12px;margin-bottom:24px;'><tr><td style='padding:18px 24px;'><p style='margin:0 0 8px;font-size:13px;color:#64748b;'>📧 <strong>Email:</strong> {{ $json.email }}</p><p style='margin:0 0 8px;font-size:13px;color:#64748b;'>📍 <strong>Cidade:</strong> {{ $json.city }}</p><p style='margin:0;font-size:13px;color:#7c3aed;font-weight:700;'>🎯 Plano Gratuito ativo</p></td></tr></table><table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:20px;'><tr><td align='center'><a href='https://app.sismeipro.com.br' style='display:inline-block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;padding:16px 40px;border-radius:12px;font-size:15px;font-weight:700;'>✨ Acessar minha conta</a></td></tr></table><table width='100%' cellpadding='0' cellspacing='0' style='background:#ede9fe;border-radius:12px;'><tr><td style='padding:16px 20px;'><p style='margin:0 0 4px;font-size:13px;font-weight:700;color:#1e1b4b;'>🚀 Desbloquear tudo a partir de R$ 19,90/mês</p><a href='https://app.sismeipro.com.br/dashboard/assinatura' style='display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;margin-top:8px;'>Ver planos</a></td></tr></table></td></tr><tr><td style='background:#1e1b4b;border-radius:0 0 20px 20px;padding:20px 32px;text-align:center;'><p style='margin:0 0 4px;font-size:13px;color:#a78bfa;font-weight:600;'>MEI Control Pro · app.sismeipro.com.br</p><p style='margin:0;font-size:11px;color:#6b7280;'>Dúvidas? <a href='mailto:suporte@sismeipro.com.br' style='color:#a78bfa;text-decoration:none;'>suporte@sismeipro.com.br</a></p></td></tr></table></td></tr></table></body></html>",
+        "options": {}
+      },
+      "id": "send-email-cliente",
+      "name": "Email Boas-Vindas",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [-288, 208],
+      "credentials": {
+        "smtp": {
+          "id": "f0odLFtQ36i26f5L",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "suporte@sismeipro.com.br",
+        "toEmail": "comercial@sismeipro.com.br",
+        "subject": "=📲 Novo cadastro: {{ $json.name }} ({{ $json.city }})",
+        "html": "=<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;'><table width='100%' cellpadding='0' cellspacing='0'><tr><td align='center' style='padding:32px 16px;'><table style='max-width:560px;width:100%;' cellpadding='0' cellspacing='0'><tr><td style='background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:16px 16px 0 0;padding:24px 28px;'><h1 style='margin:0;font-size:18px;font-weight:800;color:#fff;'>📲 Novo Cadastro — MEI Control Pro</h1></td></tr><tr><td style='background:#7c3aed;padding:10px 28px;text-align:center;'><p style='margin:0;font-size:13px;color:#ede9fe;'>⚡ <strong style='color:#fff;'>Contato recomendado em até 24h</strong></p></td></tr><tr><td style='background:#fff;padding:32px 28px;'><table width='100%' cellpadding='0' cellspacing='0' style='border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:24px;'><tr style='background:#f8f7ff;'><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;width:35%;font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;'>Nome</td><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#1e1b4b;font-weight:700;'>{{ $json.name }}</td></tr><tr><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;background:#fafafa;font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;'>Email</td><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#7c3aed;font-weight:600;'>{{ $json.email }}</td></tr><tr style='background:#f8f7ff;'><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;'>Telefone</td><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#22c55e;font-weight:700;'>{{ $json.phone }}</td></tr><tr><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;background:#fafafa;font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;'>Cidade</td><td style='padding:12px 20px;border-bottom:1px solid #e2e8f0;font-size:14px;color:#1e1b4b;'>📍 {{ $json.city }}</td></tr><tr style='background:#f8f7ff;'><td style='padding:12px 20px;font-size:12px;color:#94a3b8;font-weight:600;text-transform:uppercase;'>Data/Hora</td><td style='padding:12px 20px;font-size:14px;color:#1e1b4b;'>🕐 {{ $json.datetime }}</td></tr></table><table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:20px;'><tr><td style='padding-right:8px;' width='50%'><a href='https://wa.me/{{ $json.phoneWA }}' style='display:block;background:#22c55e;color:#fff;text-decoration:none;padding:12px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;'>💬 WhatsApp</a></td><td style='padding-left:8px;' width='50%'><a href='https://app.sismeipro.com.br/admin/usuarios' style='display:block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;'>👤 Ver Admin</a></td></tr></table></td></tr><tr><td style='background:#1e1b4b;border-radius:0 0 16px 16px;padding:16px 28px;text-align:center;'><p style='margin:0;font-size:11px;color:#a78bfa;'>MEI Control Pro · <a href='mailto:comercial@sismeipro.com.br' style='color:#a78bfa;text-decoration:none;'>comercial@sismeipro.com.br</a></p></td></tr></table></td></tr></table></body></html>",
+        "options": {}
+      },
+      "id": "send-email-interno",
+      "name": "Email Interno Comercial",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [-288, 384],
+      "credentials": {
+        "smtp": {
+          "id": "f0odLFtQ36i26f5L",
+          "name": "SMTP account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Cadastro": {
+      "main": [[{"node": "Formatar Dados", "type": "main", "index": 0}]]
+    },
+    "Formatar Dados": {
+      "main": [[
+        {"node": "Tem Telefone?", "type": "main", "index": 0},
+        {"node": "Notificar Admin WA", "type": "main", "index": 0},
+        {"node": "Preparar Email", "type": "main", "index": 0}
+      ]]
+    },
+    "Tem Telefone?": {
+      "main": [[{"node": "Enviar WhatsApp", "type": "main", "index": 0}], []]
+    },
+    "Preparar Email": {
+      "main": [[{"node": "Email Boas-Vindas", "type": "main", "index": 0}]]
+    },
+    "Email Boas-Vindas": {
+      "main": [[{"node": "Email Interno Comercial", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "51477948-37ca-4cbc-b127-bab51fc8a1fb",
+  "meta": {
+    "instanceId": "10a519918cef272335e43856429e52da7a98cc071ad01bc3e82c3b83323afc30"
+  },
+  "id": "LmrpBwHCCvzW7irr",
+  "tags": []
+}
