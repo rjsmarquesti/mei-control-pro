@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { useAuth } from '@/hooks/useAuth'
+import { usePlan } from '@/hooks/usePlan'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { MobileNav } from './MobileNav'
@@ -13,11 +15,19 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { brandSettings } = useAppStore()
+  const router = useRouter()
   useAuth()
+  const { trialExpired, loading } = usePlan()
 
   useEffect(() => {
     document.documentElement.style.setProperty('--primary', brandSettings.primaryColor)
   }, [brandSettings.primaryColor])
+
+  useEffect(() => {
+    if (!loading && trialExpired) {
+      router.replace('/trial-expirado')
+    }
+  }, [loading, trialExpired, router])
 
   return (
     <div className="flex h-screen overflow-hidden bg-background" style={{ height: '100dvh' }}>

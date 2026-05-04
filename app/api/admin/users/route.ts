@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
     const { data: authData, error: authError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
     if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
 
-    // Busca todos os profiles
+    // Busca todos os profiles (inclui campos de trial)
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id,name,email,phone,city,role,status,subscription_plan,subscription_expires_at,updated_at')
+      .select('id,name,email,phone,city,role,status,subscription_plan,subscription_expires_at,is_trial,updated_at')
 
     const profileMap = new Map((profiles ?? []).map(p => [p.id, p]))
 
@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
           status: p?.status ?? 'active',
           subscription_plan: p?.subscription_plan ?? 'free',
           subscription_expires_at: p?.subscription_expires_at ?? null,
+          is_trial: p?.is_trial ?? false,
           updated_at: p?.updated_at ?? u.created_at,
         }
       })
@@ -79,10 +80,26 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const supabase = getServiceClient()
-    const { id, ...updates } = await req.json()
+    const body = await req.json()
+    const { id, action, ...updates } = body
     if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
-    // Atualiza e verifica o resultado
+    // Ação especial: restaurar trial de 7 dias
+    if (action === 'restore_trial') {
+      const trialExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      const { error } = await supabase.from('profiles').update({
+        subscription_plan: 'premium',
+        subscription_expires_at: trialExpires,
+        is_trial: true,
+        status: 'active',
+        updated_at: new Date().toISOString(),
+      }).eq('id', id)
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, action: 'restore_trial', trial_expires: trialExpires })
+    }
+
+    // Atualização genérica
     const { data, error } = await supabase
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })

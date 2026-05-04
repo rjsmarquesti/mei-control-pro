@@ -43,12 +43,11 @@ export async function POST(req: NextRequest) {
     const now = new Date()
     const events: object[] = []
 
-    // ── Busca todos os assinantes não-free ativos ──────────────────
+    // ── Busca assinantes pagos ativos + trials ativos ──────────────
     const { data: profiles, error } = await supabase
       .from('profiles')
-      .select('id, name, email, phone, cnpj, subscription_plan, subscription_expires_at, last_seen_at, lifecycle_notified, created_at')
-      .in('subscription_plan', ['basic', 'pro', 'premium'])
-      .eq('status', 'active')
+      .select('id, name, email, phone, cnpj, subscription_plan, subscription_expires_at, is_trial, status, last_seen_at, lifecycle_notified, created_at')
+      .or('and(subscription_plan.in.(basic,pro,premium),status.eq.active,is_trial.eq.false),and(is_trial.eq.true,status.eq.active)')
 
     if (error) throw new Error(error.message)
     if (!profiles?.length) return NextResponse.json({ ok: true, events: [] })
@@ -59,6 +58,7 @@ export async function POST(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const notified: Record<string, string> = (p.lifecycle_notified as any) ?? {}
       const phoneWA = formatPhone(p.phone ?? '')
+      const isTrial = (p as any).is_trial ?? false
       const base = {
         userId: p.id,
         nome: p.name ?? 'MEI',
@@ -67,7 +67,49 @@ export async function POST(req: NextRequest) {
         phoneWA,
         hasPhone: phoneWA.length >= 12,
         plano: p.subscription_plan,
+        is_trial: isTrial,
       }
+
+      // ── [TRIAL] Eventos exclusivos de trial ───────────────────────
+      if (isTrial && p.subscription_expires_at) {
+        const trialExpiresAt = new Date(p.subscription_expires_at)
+        const daysUntil = Math.ceil((trialExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+        // Trial expirando em ≤2 dias (notificar 1x)
+        if (daysUntil > 0 && daysUntil <= 2 && !notifiedRecently(notified, 'trial_expirando', 7)) {
+          events.push({
+            ...base,
+            tipo: 'trial_expirando',
+            dados: {
+              dias_restantes: daysUntil,
+              data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'),
+              link_planos: 'https://app.sismeipro.com.br/dashboard/assinatura',
+            },
+          })
+        }
+
+        // Trial expirado há 0-1 dias → atualizar status e notificar
+        if (daysUntil <= 0 && !notifiedRecently(notified, 'trial_expirado', 2)) {
+          // Marcar status como trial_expired e downgrade para free
+          await supabase.from('profiles').update({
+            status: 'trial_expired',
+            subscription_plan: 'free',
+            is_trial: false,
+          }).eq('id', p.id)
+
+          events.push({
+            ...base,
+            tipo: 'trial_expirado',
+            dados: {
+              data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'),
+              link_planos: 'https://app.sismeipro.com.br/trial-expirado',
+            },
+          })
+        }
+      }
+
+      // Pular demais eventos para usuários em trial (não são assinantes pagos)
+      if (isTrial) continue
 
       // ── [A] Plano expirando em ≤5 dias ────────────────────────────
       if (p.subscription_expires_at) {

@@ -32,22 +32,15 @@ export const ROUTE_PLAN: Record<string, Plan> = {
   '/dashboard/irpf':        'premium',
 }
 
+// Planos disponíveis para compra (free removido da UI)
 export const PLAN_CONFIGS: PlanConfig[] = [
-  {
-    id: 'free',
-    name: 'Gratuito',
-    price: 0,
-    color: '#6B7280',
-    description: 'Para quem está começando',
-    features: ['Dashboard', 'Receitas e despesas (20/mês)', 'Perfil'],
-  },
   {
     id: 'basic',
     name: 'Basic',
     price: 19.90,
     color: '#06B6D4',
     description: 'Para MEI organizado',
-    features: ['Tudo do Gratuito', 'Lançamentos ilimitados', 'Financeiro', 'Categorias'],
+    features: ['Lançamentos ilimitados', 'Financeiro', 'Categorias', 'Dashboard'],
   },
   {
     id: 'pro',
@@ -79,4 +72,22 @@ export function getPlanConfig(plan: Plan): PlanConfig {
 
 export function getRequiredPlanForRoute(route: string): Plan {
   return ROUTE_PLAN[route] ?? 'free'
+}
+
+export interface TrialProfile {
+  is_trial: boolean
+  subscription_expires_at: string | null
+  status: string
+}
+
+export function isTrialExpired(profile: TrialProfile): boolean {
+  if (profile.status === 'trial_expired') return true
+  if (!profile.is_trial || !profile.subscription_expires_at) return false
+  return new Date(profile.subscription_expires_at) < new Date()
+}
+
+export function trialDaysLeft(expiresAt: string | null): number {
+  if (!expiresAt) return 0
+  const diff = new Date(expiresAt).getTime() - Date.now()
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 }

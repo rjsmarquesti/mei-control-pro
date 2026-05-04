@@ -3,21 +3,33 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { RefreshCw, Search, UserCheck, UserX, Shield, ChevronDown, Plus, X, Loader2, Pencil, Calendar, Trash2 } from 'lucide-react'
+import { RefreshCw, Search, UserCheck, UserX, Shield, ChevronDown, Plus, X, Loader2, Pencil, Calendar, Trash2, Clock, RotateCcw } from 'lucide-react'
 import { useAdmin } from '@/hooks/useAdmin'
 
 interface Profile {
   id: string; name: string; email: string; phone: string; city: string
   status: string; role: string; subscription_plan: string
   subscription_expires_at: string | null; updated_at: string
+  is_trial?: boolean
 }
 
 const PLANS = ['free', 'basic', 'pro', 'premium']
 
 const statusStyle = (s: string) =>
-  s === 'blocked' ? 'bg-red-500/20 text-red-400' : s === 'suspended' ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
+  s === 'blocked' ? 'bg-red-500/20 text-red-400'
+  : s === 'suspended' ? 'bg-amber-500/20 text-amber-400'
+  : s === 'trial_expired' ? 'bg-orange-500/20 text-orange-400'
+  : 'bg-green-500/20 text-green-400'
 const statusLabel = (s: string) =>
-  s === 'blocked' ? 'Bloqueado' : s === 'suspended' ? 'Suspenso' : 'Ativo'
+  s === 'blocked' ? 'Bloqueado'
+  : s === 'suspended' ? 'Suspenso'
+  : s === 'trial_expired' ? 'Trial expirado'
+  : 'Ativo'
+
+function daysSince(dateStr: string | null): number {
+  if (!dateStr) return 0
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
+}
 
 const emptyForm = { name: '', email: '', password: '', phone: '', city: '', plan: 'free' }
 
@@ -26,6 +38,7 @@ export default function UsuariosPage() {
   const [users, setUsers] = useState<Profile[]>([])
   const [filtered, setFiltered] = useState<Profile[]>([])
   const [search, setSearch] = useState('')
+  const [tab, setTab] = useState<'all' | 'trial_expired'>('all')
   const [loadingData, setLoadingData] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -47,12 +60,15 @@ export default function UsuariosPage() {
   useEffect(() => { if (isAdmin && token) loadUsers() }, [isAdmin, token])
   useEffect(() => {
     const q = search.toLowerCase()
-    setFiltered(users.filter(u =>
+    const base = tab === 'trial_expired'
+      ? users.filter(u => u.status === 'trial_expired')
+      : users.filter(u => u.status !== 'trial_expired')
+    setFiltered(base.filter(u =>
       (u.name ?? '').toLowerCase().includes(q) ||
       (u.email ?? '').toLowerCase().includes(q) ||
       (u.city ?? '').toLowerCase().includes(q)
     ))
-  }, [search, users])
+  }, [search, users, tab])
 
   const loadUsers = async () => {
     setLoadingData(true)
@@ -123,6 +139,23 @@ export default function UsuariosPage() {
     setUsers(prev => prev.filter(x => x.id !== u.id))
   }
 
+  const restoreTrial = async (u: Profile) => {
+    if (!confirm(`Restaurar trial de 7 dias para "${u.name || u.email}"?`)) return
+    setActionLoading(u.id)
+    await af('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: u.id, action: 'restore_trial' }),
+    })
+    const newExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    setUsers(prev => prev.map(x => x.id === u.id
+      ? { ...x, status: 'active', subscription_plan: 'premium', subscription_expires_at: newExpires, is_trial: true }
+      : x
+    ))
+    setActionLoading(null)
+    setOpenMenu(null)
+  }
+
   const handleEdit = async () => {
     if (!editUser) return
     setSaving(true)
@@ -171,6 +204,28 @@ export default function UsuariosPage() {
         </div>
       </div>
 
+      {/* Abas */}
+      <div className="flex gap-1 bg-slate-900/60 border border-white/10 rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setTab('all')}
+          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${tab === 'all' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          Todos ({users.filter(u => u.status !== 'trial_expired').length})
+        </button>
+        <button
+          onClick={() => setTab('trial_expired')}
+          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${tab === 'trial_expired' ? 'bg-orange-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          <Clock size={11} />
+          Trial expirado ({users.filter(u => u.status === 'trial_expired').length})
+          {users.filter(u => u.status === 'trial_expired' && daysSince(u.subscription_expires_at) >= 40).length > 0 && (
+            <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+              {users.filter(u => u.status === 'trial_expired' && daysSince(u.subscription_expires_at) >= 40).length}
+            </span>
+          )}
+        </button>
+      </div>
+
       <div className="relative">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -186,7 +241,9 @@ export default function UsuariosPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Usuário</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden md:table-cell">Cidade</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Plano</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden sm:table-cell">Expira</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide hidden sm:table-cell">
+                  {tab === 'trial_expired' ? 'Expirado há' : 'Expira'}
+                </th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide">Ações</th>
               </tr>
@@ -214,7 +271,15 @@ export default function UsuariosPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    {u.subscription_expires_at ? (
+                    {tab === 'trial_expired' && u.subscription_expires_at ? (() => {
+                      const days = daysSince(u.subscription_expires_at)
+                      return (
+                        <span className={`text-xs font-medium ${days >= 40 ? 'text-red-400' : 'text-orange-400'}`}>
+                          {days}d atrás
+                          {days >= 40 && <span className="ml-1 text-[10px] bg-red-500/20 px-1.5 py-0.5 rounded-full">Excluir</span>}
+                        </span>
+                      )
+                    })() : u.subscription_expires_at ? (
                       <span className={`text-xs ${new Date(u.subscription_expires_at) < new Date() ? 'text-red-400' : 'text-slate-300'}`}>
                         {new Date(u.subscription_expires_at).toLocaleDateString('pt-BR')}
                       </span>
@@ -241,12 +306,21 @@ export default function UsuariosPage() {
                           <ChevronDown size={12} />
                         </button>
                         {openMenu === u.id && (
-                          <div className="absolute right-0 top-8 z-50 min-w-[150px] rounded-xl border border-white/10 bg-slate-900 shadow-xl py-1">
-                            {u.status !== 'active' && <button onClick={() => updateUser(u.id, { status: 'active' })} className="w-full text-left px-3 py-2 text-xs text-green-400 hover:bg-white/5 flex items-center gap-2"><UserCheck size={13} /> Ativar</button>}
-                            {u.status !== 'suspended' && <button onClick={() => updateUser(u.id, { status: 'suspended' })} className="w-full text-left px-3 py-2 text-xs text-amber-400 hover:bg-white/5 flex items-center gap-2"><UserX size={13} /> Suspender</button>}
-                            {u.status !== 'blocked' && <button onClick={() => updateUser(u.id, { status: 'blocked' })} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2"><UserX size={13} /> Bloquear</button>}
-                            {u.role !== 'admin' && <button onClick={() => updateUser(u.id, { role: 'admin' })} className="w-full text-left px-3 py-2 text-xs text-blue-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/10"><Shield size={13} /> Tornar Admin</button>}
-                            <button onClick={() => { setOpenMenu(null); deleteUser(u) }} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/10"><Trash2 size={13} /> Excluir</button>
+                          <div className="absolute right-0 top-8 z-50 min-w-[170px] rounded-xl border border-white/10 bg-slate-900 shadow-xl py-1">
+                            {u.status === 'trial_expired' ? (
+                              <>
+                                <button onClick={() => { setOpenMenu(null); restoreTrial(u) }} className="w-full text-left px-3 py-2 text-xs text-green-400 hover:bg-white/5 flex items-center gap-2"><RotateCcw size={13} /> Restaurar trial 7d</button>
+                                <button onClick={() => { setOpenMenu(null); deleteUser(u) }} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/10"><Trash2 size={13} /> Excluir conta</button>
+                              </>
+                            ) : (
+                              <>
+                                {u.status !== 'active' && <button onClick={() => updateUser(u.id, { status: 'active' })} className="w-full text-left px-3 py-2 text-xs text-green-400 hover:bg-white/5 flex items-center gap-2"><UserCheck size={13} /> Ativar</button>}
+                                {u.status !== 'suspended' && <button onClick={() => updateUser(u.id, { status: 'suspended' })} className="w-full text-left px-3 py-2 text-xs text-amber-400 hover:bg-white/5 flex items-center gap-2"><UserX size={13} /> Suspender</button>}
+                                {u.status !== 'blocked' && <button onClick={() => updateUser(u.id, { status: 'blocked' })} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2"><UserX size={13} /> Bloquear</button>}
+                                {u.role !== 'admin' && <button onClick={() => updateUser(u.id, { role: 'admin' })} className="w-full text-left px-3 py-2 text-xs text-blue-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/10"><Shield size={13} /> Tornar Admin</button>}
+                                <button onClick={() => { setOpenMenu(null); deleteUser(u) }} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/10"><Trash2 size={13} /> Excluir</button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -318,6 +392,7 @@ export default function UsuariosPage() {
                     <option value="active">Ativo</option>
                     <option value="suspended">Suspenso</option>
                     <option value="blocked">Bloqueado</option>
+                    <option value="trial_expired">Trial expirado</option>
                   </select>
                 </div>
                 <div className="flex gap-3 pt-2">

@@ -13,21 +13,12 @@ import { useSearchParams } from 'next/navigation'
 
 const plans = [
   {
-    id: 'free',
-    name: 'Gratuito',
-    price: 0,
-    color: '#6B7280',
-    description: 'Para quem está começando',
-    features: ['Dashboard', 'Receitas e despesas (20/mês)', 'Perfil'],
-    missing: ['Financeiro', 'Categorias', 'Relatórios avançados', 'DAS & Impostos', 'IRPF Anual'],
-  },
-  {
     id: 'basic',
     name: 'Basic',
     price: 19.90,
     color: '#06B6D4',
     description: 'Para MEI organizado',
-    features: ['Tudo do Gratuito', 'Lançamentos ilimitados', 'Financeiro', 'Categorias'],
+    features: ['Lançamentos ilimitados', 'Financeiro completo', 'Categorias', 'Dashboard'],
     missing: ['Relatórios avançados', 'DAS & Impostos', 'IRPF Anual'],
   },
   {
@@ -94,14 +85,13 @@ function PaymentFeedback() {
 }
 
 const ANNUAL_DISCOUNT = 0.20
-
 const annualPrice = (monthly: number) => +(monthly * 12 * (1 - ANNUAL_DISCOUNT)).toFixed(2)
 const annualMonthly = (monthly: number) => +(monthly * (1 - ANNUAL_DISCOUNT)).toFixed(2)
 const annualSaving = (monthly: number) => +(monthly * 12 * ANNUAL_DISCOUNT).toFixed(2)
 
 export default function AssinaturaPage() {
   const { brandSettings } = useAppStore()
-  const { plan: currentPlan, expiresAt, loading: planLoading } = usePlan()
+  const { plan: currentPlan, expiresAt, isTrial, daysLeft, loading: planLoading } = usePlan()
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [billing, setBilling] = useState<'monthly' | 'annual'>('annual')
 
@@ -109,13 +99,11 @@ export default function AssinaturaPage() {
     if (planLoading) return
     const params = new URLSearchParams(window.location.search)
     const checkout = params.get('checkout')
-    if (checkout && checkout !== 'free') {
-      handleCheckout(checkout)
-    }
+    if (checkout) handleCheckout(checkout)
   }, [planLoading])
 
   const getCheckoutPlanId = (planId: string) =>
-    billing === 'annual' && planId !== 'free' ? `${planId}_annual` : planId
+    billing === 'annual' ? `${planId}_annual` : planId
 
   const handleCheckout = async (planId: string) => {
     const checkoutPlanId = getCheckoutPlanId(planId)
@@ -127,10 +115,7 @@ export default function AssinaturaPage() {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({
-          plan: checkoutPlanId,
-          userEmail: session.user.email,
-        }),
+        body: JSON.stringify({ plan: checkoutPlanId, userEmail: session.user.email }),
       })
 
       const data = await res.json()
@@ -155,6 +140,22 @@ export default function AssinaturaPage() {
           <h2 className="text-xl font-bold text-foreground">Assinatura</h2>
           <p className="text-sm text-muted-foreground mt-1">Escolha o plano ideal para o seu negócio</p>
         </div>
+
+        {/* Banner de trial ativo */}
+        {!planLoading && isTrial && (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className={`flex items-center gap-3 p-4 rounded-xl border ${(daysLeft ?? 0) <= 2 ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-amber-500/30 bg-amber-500/10 text-amber-400'}`}>
+            <Clock size={20} className="shrink-0" />
+            <div>
+              <p className="text-sm font-semibold">
+                {(daysLeft ?? 0) <= 2
+                  ? `Atenção: seu teste expira em ${daysLeft} dia${daysLeft === 1 ? '' : 's'}!`
+                  : `Você está no período de teste — ${daysLeft} dias restantes`}
+              </p>
+              <p className="text-xs opacity-80">Assine agora para manter acesso completo após o teste.</p>
+            </div>
+          </motion.div>
+        )}
 
         {/* Toggle mensal / anual */}
         <div className="flex flex-col items-center gap-3">
@@ -186,8 +187,8 @@ export default function AssinaturaPage() {
           <PaymentFeedback />
         </Suspense>
 
-        {/* Current plan banner */}
-        {!planLoading && (
+        {/* Current plan banner (somente para planos pagos ativos) */}
+        {!planLoading && !isTrial && currentPlan !== 'free' && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             className="glass-card p-5 flex items-center justify-between flex-wrap gap-3"
             style={{ borderLeft: `4px solid ${cfg.color}` }}>
@@ -198,26 +199,22 @@ export default function AssinaturaPage() {
               <div>
                 <p className="text-sm font-bold text-foreground">Plano {cfg.name} — Ativo</p>
                 <p className="text-xs text-muted-foreground">
-                  {currentPlan === 'free'
-                    ? 'Sem cobrança'
-                    : expiresAt
-                      ? `Expira em ${new Date(expiresAt).toLocaleDateString('pt-BR')}`
-                      : 'Renova mensalmente via Mercado Pago'}
+                  {expiresAt
+                    ? `Expira em ${new Date(expiresAt).toLocaleDateString('pt-BR')}`
+                    : 'Renova via Mercado Pago'}
                 </p>
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {currentPlan !== 'free' && (
-                <button
-                  onClick={() => handleCheckout(currentPlan)}
-                  disabled={checkoutLoading === currentPlan}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border/60 text-sm font-medium text-foreground hover:bg-muted transition-all"
-                >
-                  {checkoutLoading === currentPlan
-                    ? <><Loader2 size={13} className="animate-spin" /> Aguarde...</>
-                    : <><ArrowRight size={13} /> Renovar</>}
-                </button>
-              )}
+              <button
+                onClick={() => handleCheckout(currentPlan)}
+                disabled={checkoutLoading === currentPlan}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border/60 text-sm font-medium text-foreground hover:bg-muted transition-all"
+              >
+                {checkoutLoading === currentPlan
+                  ? <><Loader2 size={13} className="animate-spin" /> Aguarde...</>
+                  : <><ArrowRight size={13} /> Renovar</>}
+              </button>
               {currentPlan !== 'premium' && (
                 <button
                   onClick={() => handleCheckout('pro')}
@@ -232,9 +229,9 @@ export default function AssinaturaPage() {
         )}
 
         {/* Plans grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {plans.map((plan, i) => {
-            const isCurrent = plan.id === currentPlan
+            const isCurrent = plan.id === currentPlan && !isTrial
             const isLoading = checkoutLoading === plan.id
 
             return (
@@ -244,7 +241,7 @@ export default function AssinaturaPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08 }}
                 className="glass-card p-6 flex flex-col relative"
-                style={plan.popular ? { boxShadow: `0 0 0 2px ${plan.color}` } : isCurrent && plan.id !== 'free' ? { boxShadow: `0 0 0 2px ${plan.color}80` } : {}}
+                style={plan.popular ? { boxShadow: `0 0 0 2px ${plan.color}` } : isCurrent ? { boxShadow: `0 0 0 2px ${plan.color}80` } : {}}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[11px] font-bold text-white"
@@ -270,9 +267,7 @@ export default function AssinaturaPage() {
                 </div>
 
                 <div className="mb-5">
-                  {plan.price === 0 ? (
-                    <p className="text-3xl font-bold text-foreground">Grátis</p>
-                  ) : billing === 'annual' ? (
+                  {billing === 'annual' ? (
                     <div className="space-y-1">
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-sm text-muted-foreground line-through opacity-50">R${plan.price.toFixed(2).replace('.', ',')}</span>
@@ -320,16 +315,14 @@ export default function AssinaturaPage() {
 
                 <button
                   disabled={isCurrent || isLoading}
-                  onClick={() => plan.id !== 'free' && !isCurrent && handleCheckout(plan.id)}
+                  onClick={() => !isCurrent && handleCheckout(plan.id)}
                   className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${isCurrent ? 'bg-muted text-muted-foreground cursor-default' : 'text-white hover:opacity-90'}`}
-                  style={!isCurrent && plan.id !== 'free' ? { background: plan.color, boxShadow: `0 4px 16px ${plan.color}35` } : {}}
+                  style={!isCurrent ? { background: plan.color, boxShadow: `0 4px 16px ${plan.color}35` } : {}}
                 >
                   {isLoading ? (
                     <><Loader2 size={14} className="animate-spin" /> Aguarde...</>
                   ) : isCurrent ? (
                     'Plano atual'
-                  ) : plan.id === 'free' ? (
-                    'Plano gratuito'
                   ) : billing === 'annual' ? (
                     <><Zap size={14} /> Assinar {plan.name} Anual <ArrowRight size={14} /></>
                   ) : (
@@ -358,9 +351,9 @@ export default function AssinaturaPage() {
           <div className="space-y-4">
             {[
               { q: 'Posso cancelar a qualquer momento?', a: 'Sim! Sem multas ou fidelidade. Cancele quando quiser.' },
-              { q: 'Meus dados ficam salvos se eu cancelar?', a: 'Seus dados ficam disponíveis por 30 dias após o cancelamento.' },
+              { q: 'Meus dados ficam salvos se eu cancelar?', a: 'Seus dados ficam disponíveis por 40 dias após o encerramento.' },
               { q: 'O plano renova automaticamente?', a: 'Não. Cada pagamento é avulso e ativa o plano por 30 dias (mensal) ou 365 dias (anual).' },
-              { q: 'Como funciona o plano anual?', a: 'Você paga uma única vez com 20% de desconto e fica ativo por 12 meses. Ideal para quem não quer preocupação mensal.' },
+              { q: 'Como funciona o período de teste?', a: 'Você tem 7 dias de acesso completo ao plano Premium, sem precisar de cartão. Após o teste, escolha um plano para continuar.' },
             ].map(({ q, a }) => (
               <div key={q} className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
                 <p className="text-sm font-semibold text-foreground mb-1">{q}</p>
