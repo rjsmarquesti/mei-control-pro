@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase-server'
 
 const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
+const N8N_TRIAL_WEBHOOK = 'https://n8n.divulgabr.com.br/webhook/mei-trial'
 const MEI_LIMITE_ANUAL = Number(process.env.MEI_LIMITE_ANUAL ?? 81000)
 const LIMITE_ALERTA_PCT = 0.75 // alerta a partir de 75%
 
@@ -214,6 +215,22 @@ export async function POST(req: NextRequest) {
             },
           })
         }
+      }
+    }
+
+    // Disparar eventos de trial para o n8n
+    const trialEvents = events.filter((e: any) =>
+      e.tipo === 'trial_expirando' || e.tipo === 'trial_expirado'
+    )
+    for (const ev of trialEvents) {
+      try {
+        await fetch(N8N_TRIAL_WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ev),
+        })
+      } catch {
+        // Nunca bloquear o lifecycle por falha no webhook
       }
     }
 
