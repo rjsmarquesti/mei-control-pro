@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import {
   LayoutDashboard, TrendingUp, ArrowDownLeft, ArrowUpRight,
   BarChart3, FileText, Receipt, Tag, CreditCard, User,
-  ChevronRight, Lock, Sparkles, LineChart,
+  ChevronRight, Lock, Sparkles, LineChart, Gauge,
 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { usePlan } from '@/hooks/usePlan'
@@ -16,7 +16,8 @@ import { type Plan } from '@/lib/plans'
 
 const navItems: { href: string; icon: any; label: string; badge?: string; requiredPlan: Plan }[] = [
   { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard',      requiredPlan: 'free' },
-  { href: '/dashboard/financeiro',   icon: TrendingUp,      label: 'Financeiro',     requiredPlan: 'basic' },
+  { href: '/dashboard/financeiro',           icon: TrendingUp, label: 'Financeiro',           requiredPlan: 'basic' },
+  { href: '/dashboard/controle-financeiro', icon: Gauge,      label: 'Controle Financeiro',  requiredPlan: 'pro', badge: 'PRO' },
   { href: '/dashboard/receitas',     icon: ArrowDownLeft,   label: 'Receitas',       requiredPlan: 'free' },
   { href: '/dashboard/despesas',     icon: ArrowUpRight,    label: 'Despesas',       requiredPlan: 'free' },
   { href: '/dashboard/relatorios',            icon: BarChart3,  label: 'Relatórios',          requiredPlan: 'pro' },

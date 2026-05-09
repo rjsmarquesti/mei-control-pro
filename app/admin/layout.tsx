@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, CreditCard, Target,
-  Settings, LogOut, Menu, X, Shield, HeadphonesIcon,
+  Settings, LogOut, Menu, X, Shield, HeadphonesIcon, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/hooks/useAuth'
@@ -17,6 +17,7 @@ const nav = [
   { href: '/admin/crm', icon: HeadphonesIcon, label: 'CRM / Suporte' },
   { href: '/admin/pagamentos', icon: CreditCard, label: 'Pagamentos' },
   { href: '/admin/leads', icon: Target, label: 'Leads' },
+  { href: '/admin/admins', icon: ShieldCheck, label: 'Administradores' },
   { href: '/admin/configuracoes', icon: Settings, label: 'Configurações' },
 ]
 
