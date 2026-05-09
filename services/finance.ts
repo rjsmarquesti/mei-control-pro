@@ -50,8 +50,8 @@ async function checkFreeMonthlyLimit(userId: string): Promise<void> {
     .gte('date', start)
     .lte('date', end)
 
-  if ((count ?? 0) >= 20) {
-    throw new Error('Limite de 20 lançamentos por mês atingido. Faça upgrade para continuar.')
+  if ((count ?? 0) >= 100) {
+    throw new Error('Limite de 100 lançamentos por mês atingido. Faça upgrade para continuar.')
   }
 }
 
