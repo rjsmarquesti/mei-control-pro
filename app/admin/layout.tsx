@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Users, CreditCard, Target,
-  Settings, LogOut, Menu, X, Shield, HeadphonesIcon, ShieldCheck,
+  Settings, LogOut, Menu, X, Shield, HeadphonesIcon, ShieldCheck, TrendingUp, Key,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/hooks/useAuth'
@@ -18,6 +18,8 @@ const nav = [
   { href: '/admin/pagamentos', icon: CreditCard, label: 'Pagamentos' },
   { href: '/admin/leads', icon: Target, label: 'Leads' },
   { href: '/admin/admins', icon: ShieldCheck, label: 'Administradores' },
+  { href: '/admin/conversoes', icon: TrendingUp, label: 'Conversões' },
+  { href: '/admin/mei-kit', icon: Key, label: 'MEI Kit' },
   { href: '/admin/configuracoes', icon: Settings, label: 'Configurações' },
 ]
 
