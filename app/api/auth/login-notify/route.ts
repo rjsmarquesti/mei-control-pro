@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getUserFromRequest } from '@/lib/auth'
 
 const N8N_BASE = 'https://n8n.divulgabr.com.br'
 
@@ -14,10 +15,11 @@ function formatPhone(phone: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const { userId } = await req.json()
-    if (!userId) return NextResponse.json({ ok: false }, { status: 400 })
+  // O alvo do alerta é sempre o dono do token — nunca um userId vindo do corpo.
+  const userId = await getUserFromRequest(req)
+  if (!userId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
+  try {
     const profile = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, phone: true } })
 
     const phoneWA = formatPhone(profile?.phone ?? '')

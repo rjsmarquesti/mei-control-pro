@@ -79,8 +79,8 @@ export default function LoginPage() {
         // Notificar usuário via WhatsApp (fire-and-forget, não bloqueia)
         fetch('/api/auth/login-notify', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: data.user.id }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.accessToken}` },
+          body: JSON.stringify({}),
         }).catch(() => {})
 
         const dest = data.user.role === 'admin' ? '/admin' : planoParam ? `/dashboard/assinatura?checkout=${planoParam}` : '/dashboard'
@@ -113,8 +113,8 @@ export default function LoginPage() {
         // Notificar via n8n (WhatsApp + nutrição) — server-side para não expor URLs
         fetch('/api/notifications/register', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone, city }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.accessToken}` },
+          body: JSON.stringify({}),
         }).catch(() => {})
 
         // Registrar consentimento LGPD

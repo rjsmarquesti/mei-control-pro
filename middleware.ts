@@ -13,6 +13,8 @@ const RULES: { matcher: RegExp; limit: number; windowMs: number }[] = [
   { matcher: /^\/api\/lgpd\//,        limit: 5,   windowMs: 300_000 }, // 5 req/5min em LGPD
   { matcher: /^\/api\/mei-ativar$/,   limit: 5,   windowMs: 300_000 }, // 5 req/5min — anti brute-force
   { matcher: /^\/api\/mei-verificar$/,limit: 10,  windowMs: 60_000  }, // 10 req/min — revalidação
+  { matcher: /^\/api\/leads$/,        limit: 10,  windowMs: 60_000  }, // 10 req/min — captura pública (não afeta /api/leads/status do n8n)
+  { matcher: /^\/api\/notifications\/register$/, limit: 5, windowMs: 60_000 }, // 5 req/min — dispara n8n/WhatsApp
 ]
 
 // Limpa entradas expiradas a cada 500 req para evitar memory leak
@@ -69,5 +71,7 @@ export const config = {
     '/api/lgpd/:path*',
     '/api/mei-ativar',
     '/api/mei-verificar',
+    '/api/leads',
+    '/api/notifications/register',
   ],
 }

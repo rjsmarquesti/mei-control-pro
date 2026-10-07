@@ -28,9 +28,7 @@
 — (aguardando próxima feature)
 
 ### Issues abertas (revisão de código 06/10/2026)
-- 🟡 `POST /api/notifications/register` sem auth e sem rate limit — dispara workflows do n8n com nome/e-mail/telefone arbitrários (risco de spam de WhatsApp pela instância `sismei`)
-- 🟡 `POST /api/leads` público, sem rate limit, aceita `status`/`notes` do cliente em upsert por e-mail
-- 🟡 `POST /api/auth/login-notify` aceita `userId` do corpo sem token (exige conhecer o UUID)
+- 🟢 `notifications/register`, `leads` e `auth/login-notify` endurecidos em 06/10/2026 (**corrigido no código, NÃO commitado/buildado/deployado**): register e login-notify exigem Bearer e usam os dados do dono do token (register só até 10 min após o cadastro); leads continua público mas força `status:'novo'` na criação, não altera status/notes de lead existente e valida e-mail/tamanhos; rate limit no `middleware.ts` (`/api/leads` 10/min, `/api/notifications/register` 5/min). `npm test` = 22 testes (`__tests__/`). `login/page.tsx` envia o token nas 2 chamadas. Efeito conhecido: cliente PWA antigo (JS em cache) leva 401 nessas 2 chamadas — só perde o aviso de WhatsApp.
 - 🟡 MFA admin não existe na auth própria — **não ativar** `ADMIN_MFA_REQUIRED=true` (bloquearia todos os admins)
 - 🟡 `Dockerfile` sem `HEALTHCHECK` e sem `prisma migrate deploy` no deploy (migrations são manuais)
 - 🟡 Projeto sem testes automatizados
