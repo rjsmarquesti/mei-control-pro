@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   TrendingUp,
   TrendingDown,
@@ -27,6 +27,7 @@ import { SkeletonChart } from '@/components/ui/SkeletonCard'
 import { useDashboard } from '@/hooks/useDashboard'
 import { usePlan } from '@/hooks/usePlan'
 import { formatCurrency } from '@/lib/utils'
+import { TrialBanner } from '@/components/plan/TrialBanner'
 
 const MONTHLY_PLANS = ['basic', 'pro', 'premium']
 const ANNUAL_BANNER_KEY = 'annual_banner_dismissed'
@@ -34,6 +35,7 @@ const ANNUAL_BANNER_KEY = 'annual_banner_dismissed'
 export default function DashboardPage() {
   const { metrics, transactions, chartData, categoryData, isLoading } = useDashboard()
   const { plan } = usePlan()
+  const prefersReducedMotion = useReducedMotion()
   const [bannerVisible, setBannerVisible] = useState(false)
   const [dasDefaultValue, setDasDefaultValue] = useState(70.6)
 
@@ -65,9 +67,9 @@ export default function DashboardPage() {
         {/* ── Banner Promoção Anual ────────────────────────────────── */}
         {showAnnualBanner && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -8 }}
             className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-2xl px-5 py-4 overflow-hidden"
             style={{ background: 'linear-gradient(135deg, #1e0840 0%, #0d1b3e 100%)', border: '1px solid #7C3AED40' }}
           >
@@ -78,7 +80,7 @@ export default function DashboardPage() {
                 <Zap size={18} className="text-violet-300" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-white">💰 Economize 20% no plano anual</p>
+                <p className="text-sm font-bold text-white">Economize 20% no plano anual</p>
                 <p className="text-xs text-violet-200/80 mt-0.5">Pague uma vez, fique tranquilo o ano inteiro.</p>
               </div>
             </div>
@@ -92,13 +94,17 @@ export default function DashboardPage() {
               </Link>
               <button
                 onClick={dismissBanner}
-                className="h-7 w-7 rounded-lg flex items-center justify-center text-violet-300/60 hover:text-violet-200 hover:bg-white/10 transition-colors"
+                aria-label="Fechar promoção"
+                className="h-11 w-11 rounded-lg flex items-center justify-center text-violet-300/60 hover:text-violet-200 hover:bg-white/10 transition-colors"
               >
                 <X size={14} />
               </button>
             </div>
           </motion.div>
         )}
+
+        {/* ── Trial / Engajamento Banner ──────────────────────────── */}
+        <TrialBanner transactionCount={transactions.length} />
 
         {/* ── Row 1: Metric Cards ─────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

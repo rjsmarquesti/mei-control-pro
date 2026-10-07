@@ -47,7 +47,7 @@ export function MEILimitCard({ used, limit, isLoading }: MEILimitCardProps) {
       className="glass-card p-5"
     >
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-bold text-foreground">Limite MEI</p>
+        <p className="text-sm font-semibold tracking-tight text-foreground">Limite MEI</p>
         {isWarning ? (
           <div className={`flex items-center gap-1 text-xs font-semibold ${isCritical ? 'text-red-400' : 'text-amber-400'}`}>
             <AlertTriangle size={13} />
@@ -91,7 +91,7 @@ export function MEILimitCard({ used, limit, isLoading }: MEILimitCardProps) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5 }}
-              className="text-xl font-bold"
+              className="text-xl font-bold font-mono"
               style={{ color }}
             >
               {percentage.toFixed(0)}%
@@ -103,16 +103,16 @@ export function MEILimitCard({ used, limit, isLoading }: MEILimitCardProps) {
         <div className="flex-1 min-w-0 space-y-3">
           <div>
             <p className="text-xs text-muted-foreground">Faturado</p>
-            <p className="text-base font-bold text-foreground">{formatCurrency(used)}</p>
+            <p className="text-base font-bold font-mono text-foreground">{formatCurrency(used)}</p>
           </div>
           <div className="h-px bg-border/60" />
           <div>
             <p className="text-xs text-muted-foreground">Limite anual</p>
-            <p className="text-sm font-semibold text-muted-foreground">{formatCurrency(limit)}</p>
+            <p className="text-sm font-semibold font-mono text-muted-foreground">{formatCurrency(limit)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Disponível</p>
-            <p className="text-sm font-semibold text-emerald-400">{formatCurrency(limit - used)}</p>
+            <p className="text-sm font-semibold font-mono text-emerald-400">{formatCurrency(limit - used)}</p>
           </div>
         </div>
       </div>

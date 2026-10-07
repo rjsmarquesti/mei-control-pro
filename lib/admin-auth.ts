@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { getServiceClient } from '@/lib/supabase-server'
+import { verifyAccessToken } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { logSecurityEvent } from '@/lib/audit'
+
+// Ativar após habilitar TOTP no fluxo de login próprio (ainda não implementado).
+const MFA_REQUIRED = process.env.ADMIN_MFA_REQUIRED === 'true'
 
 export async function requireAdmin(req: NextRequest): Promise<{ error: NextResponse } | { adminId: string }> {
   const authHeader = req.headers.get('authorization')
@@ -9,23 +13,25 @@ export async function requireAdmin(req: NextRequest): Promise<{ error: NextRespo
   }
   const token = authHeader.replace('Bearer ', '')
 
-  try {
-    const anonClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    const { data: { user }, error } = await anonClient.auth.getUser(token)
-    if (error || !user) {
-      return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-    }
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
+  const ua = req.headers.get('user-agent') ?? null
 
-    const svc = getServiceClient()
-    const { data: profile } = await svc.from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'admin') {
+  try {
+    const payload = verifyAccessToken(token)
+
+    const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { role: true } })
+    if (user?.role !== 'admin') {
+      await logSecurityEvent({ userId: payload.sub, action: 'admin_access_denied_role', ip, user_agent: ua })
       return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
     }
 
-    return { adminId: user.id }
+    if (MFA_REQUIRED) {
+      // TOTP ainda não implementado na auth própria — placeholder mantido do design original.
+      await logSecurityEvent({ userId: payload.sub, action: 'admin_access_denied_mfa', ip, user_agent: ua })
+      return { error: NextResponse.json({ error: 'MFA obrigatório para acesso administrativo.' }, { status: 403 }) }
+    }
+
+    return { adminId: payload.sub }
   } catch {
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }

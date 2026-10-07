@@ -55,7 +55,7 @@ export function DASCard({ value, dueDate, isLoading }: DASCardProps) {
         >
           <Receipt size={16} style={{ color: brandSettings.primaryColor }} />
         </div>
-        <span className="text-sm font-bold text-foreground">Próximo DAS</span>
+        <span className="text-sm font-semibold tracking-tight text-foreground">Próximo DAS</span>
         {(isOverdue || isUrgent) && (
           <span className={`ml-auto text-[11px] font-bold px-2 py-0.5 rounded-lg ${isOverdue ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
             {isOverdue ? 'Vencido' : `${daysUntilDue}d`}
@@ -64,7 +64,7 @@ export function DASCard({ value, dueDate, isLoading }: DASCardProps) {
       </div>
 
       <>
-        <p className="text-3xl font-bold text-foreground tracking-tight mb-1">
+        <p className="text-3xl font-bold font-mono text-foreground tracking-tight mb-1">
           {formatCurrency(value)}
         </p>
 

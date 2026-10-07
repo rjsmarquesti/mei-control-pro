@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { Settings, Save, RefreshCw, CheckCircle2, AlertCircle, Smartphone } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { getAccessToken } from '@/lib/session'
 
 interface Setting {
   key: string
@@ -28,12 +28,12 @@ export default function ConfiguracoesPage() {
 
   const checkAdminAndLoad = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Não autenticado.'); setLoading(false); return }
-      setToken(session.access_token)
+      const accessToken = getAccessToken()
+      if (!accessToken) { setError('Não autenticado.'); setLoading(false); return }
+      setToken(accessToken)
 
       const res = await fetch('/api/admin/settings', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
       if (res.status === 403) { setError('Acesso negado.'); setLoading(false); return }
       if (!res.ok) { setError(`Erro ${res.status}`); setLoading(false); return }
@@ -47,8 +47,8 @@ export default function ConfiguracoesPage() {
           : s.value
       })
       setValues(map)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro desconhecido')
     } finally {
       setLoading(false)
     }

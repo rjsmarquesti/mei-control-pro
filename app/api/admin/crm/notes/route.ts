@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 
 export async function GET(req: NextRequest) {
@@ -11,15 +11,12 @@ export async function GET(req: NextRequest) {
   const contactId = req.nextUrl.searchParams.get('contact_id')
   if (!contactId) return NextResponse.json({ error: 'contact_id obrigatório' }, { status: 400 })
 
-  const supabase = getServiceClient()
-  const { data, error } = await supabase
-    .from('crm_notes')
-    .select('*')
-    .eq('contact_id', contactId)
-    .order('created_at', { ascending: false })
+  const notes = await prisma.crmNote.findMany({
+    where: { contactId },
+    orderBy: { createdAt: 'desc' },
+  })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  return NextResponse.json(notes.map(n => ({ ...n, id: n.id.toString() })), { status: 200 })
 }
 
 export async function POST(req: NextRequest) {
@@ -29,15 +26,15 @@ export async function POST(req: NextRequest) {
   const { contact_id, contact_type, content, interaction_type } = await req.json()
   if (!contact_id || !content) return NextResponse.json({ error: 'contact_id e content obrigatórios' }, { status: 400 })
 
-  const supabase = getServiceClient()
-  const { data, error } = await supabase
-    .from('crm_notes')
-    .insert({ contact_id, contact_type, content, interaction_type: interaction_type ?? 'note' })
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  try {
+    const note = await prisma.crmNote.create({
+      data: { contactId: contact_id, contactType: contact_type ?? 'lead', content, interactionType: interaction_type ?? 'note' },
+    })
+    return NextResponse.json({ ...note, id: note.id.toString() })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: NextRequest) {
@@ -47,8 +44,11 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
-  const supabase = getServiceClient()
-  const { error } = await supabase.from('crm_notes').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  try {
+    await prisma.crmNote.delete({ where: { id: BigInt(id) } })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }

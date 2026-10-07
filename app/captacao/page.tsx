@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, Loader2, TrendingUp, BarChart3, Shield, User, Phone, MapPin, Mail } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 
 export default function CaptacaoPage() {
   const [name, setName] = useState('')
@@ -27,15 +26,12 @@ export default function CaptacaoPage() {
     setError('')
 
     try {
-      const { error: dbError } = await supabase.from('leads').insert({
-        name,
-        email,
-        phone,
-        city,
-        status: 'novo',
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, city, status: 'novo' }),
       })
-
-      if (dbError) throw dbError
+      if (!res.ok) throw new Error('Erro ao enviar')
 
       // Notify admin via n8n
       try {

@@ -4,9 +4,10 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { Key, Copy, Check, Loader2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { useAdmin } from '@/hooks/useAdmin'
 
 export default function MeiKitPage() {
+  const { isAdmin, loading: authLoading, token } = useAdmin()
   const [email, setEmail] = useState('')
   const [result, setResult] = useState<{ email: string; code: string } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -17,15 +18,13 @@ export default function MeiKitPage() {
     setError('')
     setResult(null)
     if (!email.trim()) { setError('Informe o e-mail do cliente.'); return }
+    if (!token) { setError('Sessão expirada. Faça login novamente.'); return }
 
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Sessão expirada.'); return }
-
       const res = await fetch('/api/admin/mei-kit-code', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: email.trim() }),
       })
       const data = await res.json()
@@ -44,6 +43,9 @@ export default function MeiKitPage() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  if (authLoading) return <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Verificando acesso...</div>
+  if (!isAdmin) return null
 
   return (
     <div className="max-w-lg mx-auto space-y-6">

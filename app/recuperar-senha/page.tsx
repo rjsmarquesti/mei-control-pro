@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Loader2, ArrowLeft, CheckCircle, TrendingUp, Shield, BarChart3 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -18,14 +17,15 @@ export default function RecuperarSenhaPage() {
     setIsLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/nova-senha`,
-    })
-
-    if (error) {
-      setError('Erro ao enviar o email. Verifique o endereço e tente novamente.')
-    } else {
+    try {
+      await fetch('/api/auth/reset-password/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
       setSent(true)
+    } catch {
+      setError('Erro ao enviar o email. Verifique o endereço e tente novamente.')
     }
 
     setIsLoading(false)

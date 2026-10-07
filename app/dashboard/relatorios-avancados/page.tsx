@@ -19,9 +19,9 @@ import { PrintSection } from '@/components/ui/PrintSection'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/session'
 
-interface Transaction { id: string; type: 'revenue' | 'expense'; amount: number; category: string; description: string; date: string }
+interface Transaction { id: string; type: 'revenue' | 'expense'; value: number; category: string; description: string; date: string }
 interface Profile { name?: string; email?: string; cnpj?: string; city?: string }
 
 const MEI_LIMIT = 81000
@@ -35,19 +35,13 @@ export default function RelatoriosAvancadosPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
       const year = new Date().getFullYear()
-      const [{ data: tx }, { data: prof }] = await Promise.all([
-        supabase.from('transactions').select('id,type,amount,category,description,date')
-          .eq('user_id', session.user.id)
-          .gte('date', `${year}-01-01`)
-          .lte('date', `${year}-12-31`)
-          .order('date', { ascending: false }),
-        supabase.from('profiles').select('name,email,cnpj,city').eq('id', session.user.id).single(),
+      const [txRes, profRes] = await Promise.all([
+        authFetch(`/api/transactions?year=${year}`),
+        authFetch('/api/profile'),
       ])
-      if (tx) setTransactions(tx as Transaction[])
-      if (prof) setProfile(prof)
+      if (txRes.ok) setTransactions(await txRes.json())
+      if (profRes.ok) setProfile(await profRes.json())
       setLoadingTx(false)
     }
     load()
@@ -80,8 +74,8 @@ export default function RelatoriosAvancadosPage() {
   const categoryMap: Record<string, { revenue: number; expense: number; count: number }> = {}
   for (const t of transactions) {
     if (!categoryMap[t.category]) categoryMap[t.category] = { revenue: 0, expense: 0, count: 0 }
-    if (t.type === 'revenue') categoryMap[t.category].revenue += t.amount
-    else categoryMap[t.category].expense += t.amount
+    if (t.type === 'revenue') categoryMap[t.category].revenue += Number(t.value)
+    else categoryMap[t.category].expense += Number(t.value)
     categoryMap[t.category].count++
   }
   const categoryRows = Object.entries(categoryMap)
@@ -90,8 +84,8 @@ export default function RelatoriosAvancadosPage() {
     .slice(0, 8)
 
   // Top transactions
-  const topRevenue = [...transactions].filter(t => t.type === 'revenue').sort((a, b) => b.amount - a.amount).slice(0, 5)
-  const topExpense = [...transactions].filter(t => t.type === 'expense').sort((a, b) => b.amount - a.amount).slice(0, 5)
+  const topRevenue = [...transactions].filter(t => t.type === 'revenue').sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
+  const topExpense = [...transactions].filter(t => t.type === 'expense').sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
 
   // Projection: avg of last 3 months
   const last3 = chartData.slice(-3)
@@ -250,7 +244,7 @@ export default function RelatoriosAvancadosPage() {
                             <p className="text-sm font-medium text-foreground truncate">{t.description || t.category}</p>
                             <p className="text-xs text-muted-foreground">{t.category} · {new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
                           </div>
-                          <span className="text-sm font-bold shrink-0" style={{ color }}>{formatCurrency(t.amount)}</span>
+                          <span className="text-sm font-bold shrink-0" style={{ color }}>{formatCurrency(Number(t.value))}</span>
                         </div>
                       ))}
                     </div>

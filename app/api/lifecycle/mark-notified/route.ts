@@ -9,13 +9,14 @@ export const dynamic = 'force-dynamic'
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
 
 export async function PATCH(req: NextRequest) {
   const secret = req.headers.get('x-n8n-secret')
-  if (N8N_SECRET && secret !== N8N_SECRET) {
+  if (!N8N_SECRET || secret !== N8N_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -25,25 +26,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'userId e tipo são obrigatórios' }, { status: 400 })
     }
 
-    const supabase = getServiceClient()
-
     // Busca o notified atual para fazer merge (não sobrescrever outros tipos)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('lifecycle_notified')
-      .eq('id', userId)
-      .single()
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { lifecycleNotified: true } })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const current: Record<string, string> = (profile?.lifecycle_notified as any) ?? {}
+    const current = (user?.lifecycleNotified as Record<string, string>) ?? {}
     const updated = { ...current, [tipo]: new Date().toISOString() }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ lifecycle_notified: updated, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-
-    if (error) throw new Error(error.message)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lifecycleNotified: updated as Prisma.InputJsonValue },
+    })
 
     return NextResponse.json({ ok: true })
   } catch (err: unknown) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac } from 'crypto'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 import { signEletToken } from '@/lib/elet-token'
 
 export const dynamic = 'force-dynamic'
@@ -34,12 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Código inválido.' }, { status: 401, headers: CORS })
     }
 
-    const supabase = getServiceClient()
-    await supabase.from('elet_activations').insert({
-      email: emailNorm,
-      activated_at: new Date().toISOString(),
-      last_verified_at: new Date().toISOString(),
-    })
+    await prisma.eletActivation.create({ data: { email: emailNorm } })
 
     const token = signEletToken(emailNorm)
     return NextResponse.json({ token }, { status: 200, headers: CORS })

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Loader2, TrendingUp, Shield, BarChart3, User, Phone, MapPin, Sun, Moon, CheckCircle2, XCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { setTokens, authFetch } from '@/lib/session'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useTheme } from 'next-themes'
@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
 
   const [planoParam, setPlanoParam] = useState('')
+  const [consentAccepted, setConsentAccepted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -58,26 +59,31 @@ export default function LoginPage() {
     setError('')
 
     try {
+      if (mode === 'register' && !consentAccepted) {
+        setError('Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar uma conta.')
+        setIsLoading(false)
+        return
+      }
+
       if (mode === 'login') {
-        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error ?? 'Erro ao autenticar')
+
+        setTokens(data.accessToken, data.refreshToken)
 
         // Notificar usuário via WhatsApp (fire-and-forget, não bloqueia)
         fetch('/api/auth/login-notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: authData.user!.id }),
+          body: JSON.stringify({ userId: data.user.id }),
         }).catch(() => {})
 
-        // Redirect admin users to admin panel
-        const res = await fetch('/api/me/role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authData.session!.access_token}` },
-          body: JSON.stringify({}),
-        })
-        const { role } = await res.json()
-
-        const dest = role === 'admin' ? '/admin' : planoParam ? `/dashboard/assinatura?checkout=${planoParam}` : '/dashboard'
+        const dest = data.user.role === 'admin' ? '/admin' : planoParam ? `/dashboard/assinatura?checkout=${planoParam}` : '/dashboard'
         router.push(dest)
       } else {
         const { score } = checkPasswordStrength(password)
@@ -87,63 +93,41 @@ export default function LoginPage() {
           return
         }
 
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { name, phone, city },
-            emailRedirectTo: `${window.location.origin}/email-confirmado`,
-          },
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name, phone, city }),
         })
-        if (error) throw error
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error ?? 'Erro ao criar conta')
 
-        if (data.user) {
-          await fetch('/api/profiles/upsert', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` },
-            body: JSON.stringify({ id: data.user.id, name, email, phone, city }),
-          }).catch(() => {})
+        setTokens(data.accessToken, data.refreshToken)
 
-          // Capturar como lead (via API para bypasear RLS)
-          await fetch('/api/leads', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, phone, city, status: 'novo', notes: 'Cadastro gratuito via app' }),
-          }).catch(() => {})
+        // Capturar como lead (via API para bypasear RLS)
+        await fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, city, status: 'novo', notes: 'Cadastro gratuito via app' }),
+        }).catch(() => {})
 
-          // Notificar via n8n (WhatsApp + email)
-          try {
-            await fetch('https://n8n.divulgabr.com.br/webhook/mei-cadastro', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                name,
-                email,
-                phone,
-                city,
-                instance: 'sismei',
-                numero: '5521980485675',
-                mensagem: `🎉 Bem-vindo(a) ao MEI Control Pro!\n\nOlá, *${name}*! Seu cadastro foi realizado com sucesso.\n\n📧 *E-mail cadastrado:* ${email}\n📱 *Telefone:* ${phone}\n\n⚠️ *Ação necessária:* Para ativar sua conta, confirme seu cadastro clicando no link enviado para o e-mail acima.\n\nApós a confirmação, você terá acesso completo ao sistema para gerenciar suas finanças como MEI.\n\nQualquer dúvida, estamos à disposição! 😊\n\n🔗 https://app.sismeipro.com.br`,
-              }),
-            })
-          } catch {
-            // notificação opcional, não bloqueia o cadastro
-          }
+        // Notificar via n8n (WhatsApp + nutrição) — server-side para não expor URLs
+        fetch('/api/notifications/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, city }),
+        }).catch(() => {})
 
-          // Disparar sequência de nutrição de leads (fire and forget)
-          fetch('https://n8n.divulgabr.com.br/webhook/mei-nutricao-trigger', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, phone, city }),
-          }).catch(() => {})
-        }
+        // Registrar consentimento LGPD
+        authFetch('/api/consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        }).catch(() => {})
+
         router.push(planoParam ? `/dashboard/assinatura?checkout=${planoParam}` : '/dashboard/onboarding')
       }
-    } catch (err: any) {
-      const msg = err.message ?? ''
-      if (msg.includes('Invalid login credentials')) setError('Email ou senha incorretos')
-      else if (msg.includes('already registered')) setError('Este email já está cadastrado')
-      else setError(msg || 'Erro ao autenticar')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao autenticar')
     } finally {
       setIsLoading(false)
     }
@@ -288,6 +272,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 required
+                autoComplete="email"
                 className="input-field"
               />
             </div>
@@ -304,11 +289,13 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   minLength={8}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   className="input-field pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -344,6 +331,24 @@ export default function LoginPage() {
               })()}
             </div>
 
+            {mode === 'register' && (
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={consentAccepted}
+                  onChange={e => setConsentAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border accent-violet-600 cursor-pointer shrink-0"
+                />
+                <span className="text-xs text-muted-foreground leading-relaxed">
+                  Li e concordo com os{' '}
+                  <a href="/termos" target="_blank" className="text-violet-400 hover:underline font-medium">Termos de Uso</a>
+                  {' '}e a{' '}
+                  <a href="/privacidade" target="_blank" className="text-violet-400 hover:underline font-medium">Política de Privacidade</a>
+                  . Autorizo o tratamento dos meus dados conforme a LGPD.
+                </span>
+              </label>
+            )}
+
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -356,8 +361,8 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="btn-primary w-full mt-2"
+              disabled={isLoading || (mode === 'register' && !consentAccepted)}
+              className="btn-primary w-full mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading
                 ? <><Loader2 size={16} className="animate-spin" /> Aguarde...</>

@@ -15,7 +15,7 @@ import { useState } from 'react'
 const mainNav = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/financeiro', icon: TrendingUp, label: 'Financeiro' },
-  { href: '/dashboard/receitas', icon: Plus, label: 'Novo', isFab: true },
+  { href: '/dashboard/receitas?novo=1', icon: Plus, label: 'Novo', isFab: true },
   { href: '/dashboard/relatorios', icon: BarChart3, label: 'Relatórios' },
   { href: '/dashboard/perfil', icon: User, label: 'Perfil' },
 ]

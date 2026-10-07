@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Check, Clock, MessageCircle, Loader2, Crown, Zap } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { authFetch, getAccessToken } from '@/lib/session'
 
 const PLANS = [
   {
@@ -43,31 +43,26 @@ export default function TrialExpiradoPage() {
   const router = useRouter()
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
-  const [userEmail, setUserEmail] = useState('')
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { router.replace('/login'); return }
-      setUserEmail(session.user.email ?? '')
-    })
+    if (!getAccessToken()) router.replace('/login')
   }, [router])
 
   async function handleCheckout(planId: string) {
     setLoading(planId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.replace('/login'); return }
+      if (!getAccessToken()) { router.replace('/login'); return }
 
       const finalPlan = billing === 'annual' ? `${planId}_annual` : planId
-      const res = await fetch('/api/checkout', {
+      const res = await authFetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: finalPlan }),
       })
       const { url, error } = await res.json()
       if (error) throw new Error(error)
       window.location.href = url
-    } catch (err: any) {
+    } catch {
       alert('Erro ao iniciar pagamento. Tente novamente.')
     } finally {
       setLoading(null)
@@ -96,7 +91,7 @@ export default function TrialExpiradoPage() {
             Seu acesso gratuito expirou
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Você teve acesso completo ao MEI Control Pro por 7 dias. Escolha um plano para continuar gerenciando seu negócio.
+            Você teve acesso completo ao MEI Control Pro por 30 dias. Escolha um plano para continuar gerenciando seu negócio.
           </p>
         </motion.div>
 

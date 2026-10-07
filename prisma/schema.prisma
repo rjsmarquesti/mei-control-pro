@@ -1,0 +1,294 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Usuário (une auth.users + sismei.profiles do Supabase) ────────────────────
+model User {
+  id                    String    @id @default(uuid()) @db.Uuid
+  email                 String    @unique
+  passwordHash          String    @map("password_hash")
+  name                  String?
+  phone                 String?
+  city                  String?
+  company               String?
+  cnpj                  String?
+  activity              String?
+  meiSince              String?   @map("mei_since")
+  role                  String    @default("user") // user | admin
+  status                String    @default("active") // active | blocked | suspended | trial_expired | deletion_requested
+  subscriptionPlan      String    @default("free") @map("subscription_plan") // free | basic | pro | premium | super_premium
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+  dasMultaPct           Decimal   @default(2.00) @map("das_multa_pct") @db.Decimal(5, 2)
+  dasJurosPct           Decimal   @default(1.00) @map("das_juros_pct") @db.Decimal(5, 2)
+  lastSeenAt            DateTime? @map("last_seen_at")
+  lifecycleNotified     Json      @default("{}") @map("lifecycle_notified")
+  isTrial               Boolean   @default(false) @map("is_trial")
+  trialStartedAt        DateTime? @map("trial_started_at")
+  trialActivatedAt      DateTime? @map("trial_activated_at")
+  emailConfirmedAt      DateTime? @map("email_confirmed_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  transactions  Transaction[]
+  categories    Category[]
+  dasPayments   DasPayment[]
+  consents      Consent[]
+  auditLogs     AuditLog[]
+  lgpdRequests  LgpdRequest[]
+  mapLeads      MapLead[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+// ── Auth própria (substitui GoTrue) ────────────────────────────────────────────
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid // = jti do JWT de refresh
+  userId    String    @map("user_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ── Financeiro ─────────────────────────────────────────────────────────────────
+model Transaction {
+  id          BigInt   @id @default(autoincrement())
+  userId      String   @map("user_id") @db.Uuid
+  type        String // revenue | expense
+  description String
+  category    String   @default("Outros")
+  value       Decimal  @db.Decimal(10, 2)
+  date        DateTime @db.Date
+  status      String   @default("completed") // completed | pending | cancelled
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, type, date])
+  @@index([userId, status, date])
+  @@map("transactions")
+}
+
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  type      String // revenue | expense
+  color     String   @default("#7C3AED")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("categories")
+}
+
+model DasPayment {
+  id          BigInt    @id @default(autoincrement())
+  userId      String    @map("user_id") @db.Uuid
+  value       Decimal   @db.Decimal(10, 2)
+  dueDate     DateTime  @map("due_date") @db.Date
+  status      String    @default("pending") // pending | paid | overdue
+  competencia String? // 'YYYY-MM'
+  paidAt      DateTime? @map("paid_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, competencia])
+  @@map("das_payments")
+}
+
+// ── Configuração global (admin) ────────────────────────────────────────────────
+model SystemSetting {
+  key       String   @id
+  value     String
+  label     String?
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@map("system_settings")
+}
+
+// ── CRM / Prospecção ────────────────────────────────────────────────────────────
+model Lead {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String?
+  email     String   @unique
+  phone     String?
+  city      String?
+  status    String   @default("novo") // novo | contatado | convertido | perdido
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("leads")
+}
+
+model CrmNote {
+  id              BigInt   @id @default(autoincrement())
+  contactId       String   @map("contact_id") @db.Uuid
+  contactType     String   @default("lead") @map("contact_type")
+  content         String
+  interactionType String   @default("note") @map("interaction_type")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([contactId])
+  @@map("crm_notes")
+}
+
+model MapLead {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  businessName  String    @map("business_name")
+  phone         String?
+  phone2        String?
+  email         String?
+  website       String?
+  rating        Decimal?  @db.Decimal(2, 1)
+  reviewsCount  Int       @default(0) @map("reviews_count")
+  googleMapsUrl String?   @map("google_maps_url")
+  placeId       String?   @map("place_id")
+  estado        String
+  municipio     String
+  cidade        String?
+  bairro        String?
+  cep           String?
+  logradouro    String?
+  numero        String?
+  complemento   String?
+  latitude      Decimal?  @db.Decimal(10, 8)
+  longitude     Decimal?  @db.Decimal(11, 8)
+  nicho         String
+  categoria     String?
+  subcategoria  String?
+  tags          String[]  @default([])
+  status        String    @default("novo") // novo|contatado|qualificado|proposta|convertido|perdido|sem_interesse
+  priority      String    @default("normal") // baixa|normal|alta|urgente
+  notes         String?
+  ultimoContato DateTime? @map("ultimo_contato")
+  proximoContato DateTime? @map("proximo_contato")
+  fonte         String    @default("google_maps") // google_maps|manual|csv_import|api
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, nicho])
+  @@index([placeId])
+  @@map("map_leads")
+}
+
+model MapLeadNicho {
+  id         Int      @id @default(autoincrement())
+  nicho      String   @unique
+  categorias String[] @default([])
+  emoji      String?
+  ordem      Int      @default(99)
+
+  @@map("map_lead_nichos")
+}
+
+// ── LGPD / Auditoria ────────────────────────────────────────────────────────────
+model Consent {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  termsVersion   String   @map("terms_version")
+  privacyVersion String   @map("privacy_version")
+  ip             String?
+  userAgent      String?  @map("user_agent")
+  acceptedAt     DateTime @default(now()) @map("accepted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("consents")
+}
+
+// Imutável por convenção de aplicação — nenhuma rota deve expor update/delete.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  beforeData Json?    @map("before_data")
+  afterData  Json?    @map("after_data")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+model LgpdRequest {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  type        String // export | deletion
+  status      String    @default("pending") // pending | processing | completed | cancelled
+  requestedAt DateTime  @default(now()) @map("requested_at")
+  completedAt DateTime? @map("completed_at")
+  notes       String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("lgpd_requests")
+}
+
+// ── Licenciamento de apps Android (kits vendidos separadamente) ────────────────
+model Activation {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String
+  activatedAt    DateTime  @default(now()) @map("activated_at")
+  lastVerifiedAt DateTime  @default(now()) @map("last_verified_at")
+  revoked        Boolean   @default(false)
+  revokedAt      DateTime? @map("revoked_at")
+  revokeReason   String?   @map("revoke_reason")
+
+  @@index([email])
+  @@map("activations")
+}
+
+model EletActivation {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String
+  activatedAt    DateTime  @default(now()) @map("activated_at")
+  lastVerifiedAt DateTime  @default(now()) @map("last_verified_at")
+  revoked        Boolean   @default(false)
+  revokedAt      DateTime? @map("revoked_at")
+  revokeReason   String?   @map("revoke_reason")
+
+  @@index([email])
+  @@map("elet_activations")
+}

@@ -1,23 +1,23 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getServiceClient()
     const { name, email, phone, city, status = 'novo', notes = '' } = await req.json()
 
     if (!email) return NextResponse.json({ error: 'email obrigatório' }, { status: 400 })
 
-    const { error } = await supabase.from('leads').upsert(
-      { name, email, phone, city, status, notes, updated_at: new Date().toISOString() },
-      { onConflict: 'email' }
-    )
+    await prisma.lead.upsert({
+      where: { email },
+      create: { name, email, phone, city, status, notes },
+      update: { name, phone, city, status, notes, updatedAt: new Date() },
+    })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

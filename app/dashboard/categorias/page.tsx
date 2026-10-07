@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Tag, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { PlanGate } from '@/components/plan/PlanGate'
-import { supabase } from '@/lib/supabase'
+import { authFetch, getAccessToken } from '@/lib/session'
 
 const DEFAULT_COLORS = ['#7C3AED','#06B6D4','#10B981','#F59E0B','#EF4444','#EC4899','#8B5CF6','#14B8A6']
 
@@ -66,7 +66,6 @@ function CategoryList({ items, editingId, editName, onEditStart, onEditChange, o
 export default function CategoriasPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newType, setNewType] = useState<'revenue' | 'expense'>('revenue')
   const [newColor, setNewColor] = useState(DEFAULT_COLORS[0])
@@ -77,33 +76,27 @@ export default function CategoriasPage() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      setUserId(session.user.id)
-      const { data } = await supabase
-        .from('categories')
-        .select('id,name,type,color')
-        .eq('user_id', session.user.id)
-        .order('created_at')
-      setCategories(data ?? [])
+      if (!getAccessToken()) return
+      const res = await authFetch('/api/categories')
+      if (res.ok) setCategories(await res.json())
       setLoading(false)
     }
     load()
   }, [])
 
   const handleAdd = async () => {
-    if (!newName.trim() || !userId) return
+    if (!newName.trim()) return
     setAdding(true)
     setAddError('')
-    const { data, error } = await supabase.from('categories').insert({
-      user_id: userId,
-      name: newName.trim(),
-      type: newType,
-      color: newColor,
-    }).select().single()
-    if (error) {
+    const res = await authFetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName.trim(), type: newType, color: newColor }),
+    })
+    if (!res.ok) {
       setAddError('Erro ao salvar categoria. Tente novamente.')
-    } else if (data) {
+    } else {
+      const data = await res.json()
       setCategories([...categories, data])
       setNewName('')
     }
@@ -111,12 +104,16 @@ export default function CategoriasPage() {
   }
 
   const handleDelete = async (id: string) => {
-    await supabase.from('categories').delete().eq('id', id)
+    await authFetch(`/api/categories/${id}`, { method: 'DELETE' })
     setCategories(categories.filter((c) => c.id !== id))
   }
 
   const handleEditSave = async (id: string) => {
-    await supabase.from('categories').update({ name: editName }).eq('id', id)
+    await authFetch(`/api/categories/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editName }),
+    })
     setCategories(categories.map((c) => c.id === id ? { ...c, name: editName } : c))
     setEditingId(null)
   }

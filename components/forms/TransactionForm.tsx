@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { financeService } from '@/services/finance'
-import { supabase } from '@/lib/supabase'
+import { authFetch, getAccessToken } from '@/lib/session'
 import type { Transaction } from '@/types'
 
 const FALLBACK_REVENUE = ['Serviços', 'Consultoria', 'Projetos', 'Vendas', 'Outros']
@@ -31,23 +31,13 @@ export function TransactionForm({ type, initialData, onSuccess, onCancel }: Tran
   )
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return
-      supabase
-        .from('categories')
-        .select('name')
-        .eq('user_id', session.user.id)
-        .eq('type', type)
-        .order('created_at')
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            const userNames = data.map((c) => c.name)
-            const fallback = type === 'revenue' ? FALLBACK_REVENUE : FALLBACK_EXPENSE
-            // user categories first, then fallback items not already present
-            const merged = [...userNames, ...fallback.filter((f) => !userNames.includes(f))]
-            setCategories(merged)
-          }
-        })
+    if (!getAccessToken()) return
+    authFetch('/api/categories').then(res => res.ok ? res.json() : []).then((data: { name: string; type: string }[]) => {
+      const userNames = data.filter(c => c.type === type).map((c) => c.name)
+      if (userNames.length > 0) {
+        const fallback = type === 'revenue' ? FALLBACK_REVENUE : FALLBACK_EXPENSE
+        setCategories([...userNames, ...fallback.filter((f) => !userNames.includes(f))])
+      }
     })
   }, [type])
 

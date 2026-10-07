@@ -12,7 +12,7 @@ import { PlanGate } from '@/components/plan/PlanGate'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/session'
 
 interface Profile { name?: string; email?: string; cnpj?: string; city?: string }
 
@@ -24,16 +24,17 @@ export default function IRPFPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
       const year = new Date().getFullYear()
-      const [{ data: das }, { data: prof }] = await Promise.all([
-        supabase.from('das_payments').select('value').eq('status', 'paid')
-          .gte('paid_at', `${year}-01-01`).lte('paid_at', `${year}-12-31T23:59:59`),
-        supabase.from('profiles').select('name,email,cnpj,city').eq('id', session.user.id).single(),
+      const [dasRes, profRes] = await Promise.all([
+        authFetch('/api/das-payments'),
+        authFetch('/api/profile'),
       ])
-      if (das) setAnnualDasPaid(das.reduce((s, r) => s + (r.value ?? 0), 0))
-      if (prof) setProfile(prof)
+      if (dasRes.ok) {
+        const das = await dasRes.json() as { value: number; status: string; paid_at: string | null }[]
+        const paidThisYear = das.filter(d => d.status === 'paid' && d.paid_at?.startsWith(String(year)))
+        setAnnualDasPaid(paidThisYear.reduce((s, r) => s + Number(r.value ?? 0), 0))
+      }
+      if (profRes.ok) setProfile(await profRes.json())
     }
     load()
   }, [])

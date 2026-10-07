@@ -6,14 +6,14 @@ export const dynamic = 'force-dynamic'
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 const MEI_LIMITE_ANUAL = Number(process.env.MEI_LIMITE_ANUAL ?? 81000)
 const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET ?? ''
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-n8n-secret') ?? ''
-  if (N8N_SECRET && secret !== N8N_SECRET) {
+  if (!N8N_SECRET || secret !== N8N_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -21,18 +21,14 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ ok: true, found: false })
 
   try {
-    const supabase = getServiceClient()
     const year = new Date().getFullYear().toString()
 
-    const { data: anual } = await supabase
-      .from('transactions')
-      .select('value')
-      .eq('user_id', userId)
-      .eq('type', 'revenue')
-      .gte('date', `${year}-01-01`)
-      .lte('date', `${year}-12-31`)
+    const anual = await prisma.transaction.aggregate({
+      where: { userId, type: 'revenue', date: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) } },
+      _sum: { value: true },
+    })
 
-    const receita_anual = (anual ?? []).reduce((acc, t) => acc + Number(t.value), 0)
+    const receita_anual = Number(anual._sum.value ?? 0)
     const percentual = Math.min(Math.round((receita_anual / MEI_LIMITE_ANUAL) * 100), 100)
     const restante = Math.max(MEI_LIMITE_ANUAL - receita_anual, 0)
 

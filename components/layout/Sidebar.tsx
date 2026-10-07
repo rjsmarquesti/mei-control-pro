@@ -32,18 +32,20 @@ const bottomItems: { href: string; icon: any; label: string; requiredPlan: Plan 
   { href: '/dashboard/perfil',     icon: User,       label: 'Perfil',     requiredPlan: 'free' },
 ]
 
-const PLAN_COLOR: Record<Plan, string> = {
-  free:    '#6B7280',
-  basic:   '#06B6D4',
-  pro:     '#7C3AED',
-  premium: '#F59E0B',
+const PLAN_COLOR: Record<string, string> = {
+  free:          '#6B7280',
+  basic:         '#06B6D4',
+  pro:           '#7C3AED',
+  premium:       '#F59E0B',
+  super_premium: '#F59E0B',
 }
 
-const PLAN_LABEL: Record<Plan, string> = {
-  free:    'Gratuito',
-  basic:   'Basic',
-  pro:     'Pro',
-  premium: 'Premium',
+const PLAN_LABEL: Record<string, string> = {
+  free:          'Gratuito',
+  basic:         'Basic',
+  pro:           'Pro',
+  premium:       'Premium',
+  super_premium: 'Premium',
 }
 
 export function Sidebar() {
@@ -98,7 +100,7 @@ export function Sidebar() {
                 <item.icon size={18} className="shrink-0" />
                 <span className="flex-1">{item.label}</span>
                 {item.badge && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400">
+                  <span className="font-mono text-[9px] font-medium tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 uppercase">
                     {item.badge}
                   </span>
                 )}

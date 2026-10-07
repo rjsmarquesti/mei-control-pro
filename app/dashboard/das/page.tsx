@@ -12,7 +12,7 @@ import DASOnboardingModal from '@/components/dashboard/DASOnboardingModal'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { authFetch, decodeAccessToken } from '@/lib/session'
 
 interface DASEntry {
   id: string
@@ -71,26 +71,23 @@ export default function DASPage() {
   const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear())
   const [showOnboarding, setShowOnboarding] = useState(false)
   const load = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    setUserId(session.user.id)
+    const uid = decodeAccessToken()?.sub
+    if (!uid) return
+    setUserId(uid)
 
-    const [{ data: das }, { data: prof }] = await Promise.all([
-      supabase.from('das_payments').select('id,value,due_date,paid_at,status,competencia')
-        .eq('user_id', session.user.id).order('due_date', { ascending: false }),
-      supabase.from('profiles').select('name,email,cnpj,city').eq('id', session.user.id).single(),
+    const [dasRes, profRes] = await Promise.all([
+      authFetch('/api/das-payments'),
+      authFetch('/api/profile'),
     ])
 
-    const list = das ?? []
+    const list: DASEntry[] = dasRes.ok ? await dasRes.json() : []
     setHistory(list)
-    setProfile(prof ?? null)
 
-    // Carregar encargos do perfil
-    const { data: profileData } = await supabase.from('profiles')
-      .select('das_multa_pct,das_juros_pct').eq('id', session.user.id).single()
-    if (profileData) {
-      setMultaPct(profileData.das_multa_pct ?? 2)
-      setJurosPct(profileData.das_juros_pct ?? 1)
+    if (profRes.ok) {
+      const prof = await profRes.json()
+      setProfile(prof)
+      setMultaPct(prof.das_multa_pct ?? 2)
+      setJurosPct(prof.das_juros_pct ?? 1)
     }
 
     // Carregar valor padrão do DAS
@@ -118,7 +115,11 @@ export default function DASPage() {
 
   const handleMarkPaid = async (id: string) => {
     const now = new Date().toISOString()
-    await supabase.from('das_payments').update({ status: 'paid', paid_at: now }).eq('id', id)
+    await authFetch(`/api/das-payments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'paid', paid_at: now }),
+    })
     setHistory(h => h.map(d => d.id === id ? { ...d, status: 'paid', paid_at: now } : d))
     bumpRefresh()
   }
@@ -138,17 +139,19 @@ export default function DASPage() {
     if (!newEntry.value || !newEntry.due_date || !userId) return
     setSaving(true)
     setSaveError('')
-    const isOverdue = new Date(newEntry.due_date) < new Date()
-    const { data, error } = await supabase.from('das_payments').insert({
-      user_id: userId,
-      competencia: newEntry.competencia || null,
-      value: parseFloat(newEntry.value),
-      due_date: newEntry.due_date,
-      status: isOverdue ? 'overdue' : 'pending',
-    }).select().single()
-    if (error) {
+    const res = await authFetch('/api/das-payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        competencia: newEntry.competencia || null,
+        value: parseFloat(newEntry.value),
+        due_date: newEntry.due_date,
+      }),
+    })
+    if (!res.ok) {
       setSaveError('Erro ao salvar DAS. Tente novamente.')
-    } else if (data) {
+    } else {
+      const data = await res.json()
       setHistory([data, ...history])
       setNewEntry({ competencia: '', value: '', due_date: '' })
       setShowForm(false)
@@ -160,7 +163,11 @@ export default function DASPage() {
   const handleSaveEncargos = async () => {
     if (!userId) return
     setSavingEncargos(true)
-    await supabase.from('profiles').update({ das_multa_pct: multaPct, das_juros_pct: jurosPct }).eq('id', userId)
+    await authFetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ das_multa_pct: multaPct, das_juros_pct: jurosPct }),
+    })
     setSavingEncargos(false)
     setEncargosOk(true)
     setTimeout(() => setEncargosOk(false), 3000)

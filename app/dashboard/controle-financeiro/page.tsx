@@ -20,7 +20,7 @@ import { PrintButton } from '@/components/ui/PrintButton'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/session'
 
 const MEI_LIMIT = 81000
 const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -100,23 +100,13 @@ export default function ControleFinanceiroPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
       const year = new Date().getFullYear()
-      const [{ data: tx }, { data: das }] = await Promise.all([
-        supabase.from('transactions')
-          .select('id,type,value,category,description,date,status')
-          .eq('user_id', session.user.id)
-          .gte('date', `${year}-01-01`)
-          .lte('date', `${year}-12-31`)
-          .order('date', { ascending: false }),
-        supabase.from('das_payments')
-          .select('id,value,due_date,status,competencia')
-          .eq('user_id', session.user.id)
-          .order('due_date', { ascending: false }),
+      const [txRes, dasRes] = await Promise.all([
+        authFetch(`/api/transactions?year=${year}`),
+        authFetch('/api/das-payments'),
       ])
-      if (tx) setTransactions(tx as Transaction[])
-      if (das) setDasPayments(das as DasPayment[])
+      if (txRes.ok) setTransactions(await txRes.json())
+      if (dasRes.ok) setDasPayments(await dasRes.json())
       setLoadingExtra(false)
     }
     load()

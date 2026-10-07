@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
 const MEI_LIMITE_ANUAL = Number(process.env.MEI_LIMITE_ANUAL ?? 81000)
@@ -20,7 +20,7 @@ function formatBRL(value: number): string {
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-n8n-secret')
-  if (N8N_SECRET && secret !== N8N_SECRET) {
+  if (!N8N_SECRET || secret !== N8N_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -31,68 +31,38 @@ export async function POST(req: NextRequest) {
     const defaultYear = String(now.getFullYear() - 1)
     const year = body.year ?? defaultYear
 
-    const start = `${year}-01-01`
-    const end = `${year}-12-31`
+    const start = new Date(`${year}-01-01`)
+    const end = new Date(`${year}-12-31`)
 
-    const supabase = getServiceClient()
+    const profiles = await prisma.user.findMany({
+      where: { subscriptionPlan: { in: ['basic', 'pro', 'premium'] }, status: 'active' },
+      select: { id: true, name: true, email: true, phone: true, cnpj: true },
+    })
 
-    const { data: profiles, error: profErr } = await supabase
-      .from('profiles')
-      .select('id, name, email, phone, cnpj')
-      .in('subscription_plan', ['basic', 'pro', 'premium'])
-      .eq('status', 'active')
-
-    if (profErr) throw new Error(profErr.message)
-    if (!profiles?.length) return NextResponse.json({ ok: true, year, data: [] })
+    if (!profiles.length) return NextResponse.json({ ok: true, year, data: [] })
 
     const results = []
 
     for (const p of profiles) {
-      // Receitas anuais por mês
-      const { data: revAll } = await supabase
-        .from('transactions')
-        .select('value, date')
-        .eq('user_id', p.id)
-        .eq('type', 'revenue')
-        .gte('date', start)
-        .lte('date', end)
+      const [revAll, expAll, dasAll] = await Promise.all([
+        prisma.transaction.findMany({ where: { userId: p.id, type: 'revenue', date: { gte: start, lte: end } }, select: { value: true, date: true } }),
+        prisma.transaction.findMany({ where: { userId: p.id, type: 'expense', date: { gte: start, lte: end } }, select: { value: true, date: true } }),
+        prisma.dasPayment.findMany({ where: { userId: p.id, competencia: { gte: `${year}-01`, lte: `${year}-12` } }, select: { value: true, status: true, competencia: true } }),
+      ])
 
-      // Despesas anuais
-      const { data: expAll } = await supabase
-        .from('transactions')
-        .select('value, date')
-        .eq('user_id', p.id)
-        .eq('type', 'expense')
-        .gte('date', start)
-        .lte('date', end)
-
-      // DAS do ano
-      const { data: dasAll } = await supabase
-        .from('das_payments')
-        .select('value, status, competencia')
-        .eq('user_id', p.id)
-        .gte('competencia', `${year}-01`)
-        .lte('competencia', `${year}-12`)
-
-      const receita_anual = (revAll ?? []).reduce((acc, t) => acc + Number(t.value), 0)
-      const despesas_anuais = (expAll ?? []).reduce((acc, t) => acc + Number(t.value), 0)
+      const receita_anual = revAll.reduce((acc, t) => acc + Number(t.value), 0)
+      const despesas_anuais = expAll.reduce((acc, t) => acc + Number(t.value), 0)
       const lucro_anual = receita_anual - despesas_anuais
 
-      const das_pago = (dasAll ?? [])
-        .filter(d => d.status === 'paid')
-        .reduce((acc, d) => acc + Number(d.value), 0)
-      const das_pendentes_count = (dasAll ?? []).filter(d => d.status !== 'paid').length
+      const das_pago = dasAll.filter(d => d.status === 'paid').reduce((acc, d) => acc + Number(d.value), 0)
+      const das_pendentes_count = dasAll.filter(d => d.status !== 'paid').length
 
-      const percentual_limite = Math.min(
-        Math.round((receita_anual / MEI_LIMITE_ANUAL) * 100),
-        100
-      )
+      const percentual_limite = Math.min(Math.round((receita_anual / MEI_LIMITE_ANUAL) * 100), 100)
       const excedeu_limite = receita_anual > MEI_LIMITE_ANUAL
 
-      // Detectar meses sem lançamento
       const mesesComLancamento = new Set([
-        ...(revAll ?? []).map(t => t.date?.slice(0, 7)),
-        ...(expAll ?? []).map(t => t.date?.slice(0, 7)),
+        ...revAll.map(t => t.date.toISOString().slice(0, 7)),
+        ...expAll.map(t => t.date.toISOString().slice(0, 7)),
       ])
       const meses_sem_lancamentos: string[] = []
       for (let m = 1; m <= 12; m++) {
@@ -100,7 +70,6 @@ export async function POST(req: NextRequest) {
         if (!mesesComLancamento.has(key)) meses_sem_lancamentos.push(key)
       }
 
-      // Alertas inteligentes
       const alertas: string[] = []
       if (excedeu_limite) alertas.push('limite_excedido')
       else if (percentual_limite >= 75) alertas.push('limite_proximo')
@@ -108,7 +77,6 @@ export async function POST(req: NextRequest) {
       if (lucro_anual < 0) alertas.push('prejuizo')
       if (meses_sem_lancamentos.length >= 3) alertas.push(`meses_sem_lancamentos:${meses_sem_lancamentos.length}`)
 
-      // IRPF: MEI é isento se receita <= 81k (regra simplificada)
       const irpf_isento = receita_anual <= MEI_LIMITE_ANUAL
       const irpf_valor_tributavel = irpf_isento ? 0 : receita_anual - MEI_LIMITE_ANUAL
       const irpf_valor_isento = irpf_isento ? receita_anual : MEI_LIMITE_ANUAL
@@ -139,7 +107,6 @@ export async function POST(req: NextRequest) {
         excedeu_limite,
         meses_sem_lancamentos,
         alertas,
-        // IRPF
         irpf_isento,
         irpf_valor_isento: irpf_valor_isento.toFixed(2),
         irpf_valor_isento_fmt: formatBRL(irpf_valor_isento),

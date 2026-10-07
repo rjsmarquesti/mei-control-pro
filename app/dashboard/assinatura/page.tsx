@@ -7,7 +7,7 @@ import { Check, Crown, ArrowRight, Sparkles, Loader2, CheckCircle, AlertCircle, 
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useAppStore } from '@/store/useAppStore'
 import { usePlan } from '@/hooks/usePlan'
-import { supabase } from '@/lib/supabase'
+import { authFetch, decodeAccessToken } from '@/lib/session'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
@@ -109,13 +109,12 @@ export default function AssinaturaPage() {
     const checkoutPlanId = getCheckoutPlanId(planId)
     setCheckoutLoading(planId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      if (!decodeAccessToken()) return
 
-      const res = await fetch('/api/checkout', {
+      const res = await authFetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ plan: checkoutPlanId, userEmail: session.user.email }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: checkoutPlanId }),
       })
 
       const data = await res.json()

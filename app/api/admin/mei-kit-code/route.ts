@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac } from 'crypto'
-import { getUserFromRequest } from '@/lib/supabase-server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-const SALT = process.env.MEI_ACTIVATION_SALT ?? 'mei-kit-2026-prod'
-
 export async function POST(req: NextRequest) {
-  // Verifica autenticação admin
-  const userId = await getUserFromRequest(req)
-  if (!userId) {
-    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
-  }
+  const auth = await requireAdmin(req)
+  if ('error' in auth) return auth.error
 
-  // Verifica se é admin
-  const supabase = getServiceClient()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    return NextResponse.json({ error: 'Acesso restrito a administradores.' }, { status: 403 })
-  }
+  const SALT = process.env.MEI_ACTIVATION_SALT
+  if (!SALT) return NextResponse.json({ error: 'Servidor não configurado.' }, { status: 503 })
 
   const { email } = await req.json()
   if (!email) {

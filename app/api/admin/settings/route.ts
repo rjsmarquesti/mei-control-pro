@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 
 export async function GET(req: NextRequest) {
@@ -9,12 +9,11 @@ export async function GET(req: NextRequest) {
   if ('error' in auth) return auth.error
 
   try {
-    const supabase = getServiceClient()
-    const { data, error } = await supabase.from('system_settings').select('*').order('key')
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const data = await prisma.systemSetting.findMany({ orderBy: { key: 'asc' } })
     return NextResponse.json(data)
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -26,12 +25,15 @@ export async function PATCH(req: NextRequest) {
     const { key, value } = await req.json()
     if (!key || value === undefined) return NextResponse.json({ error: 'key e value são obrigatórios' }, { status: 400 })
 
-    const supabase = getServiceClient()
-    const { error } = await supabase.from('system_settings').upsert({ key, value, updated_at: new Date().toISOString() })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await prisma.systemSetting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value, updatedAt: new Date() },
+    })
 
     return NextResponse.json({ ok: true })
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

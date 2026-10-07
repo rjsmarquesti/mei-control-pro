@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac } from 'crypto'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 import { signMeiToken } from '@/lib/mei-token'
 
 export const dynamic = 'force-dynamic'
-
-const SALT = process.env.MEI_ACTIVATION_SALT ?? 'mei-kit-2026-prod'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +16,9 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const SALT = process.env.MEI_ACTIVATION_SALT
+  if (!SALT) return NextResponse.json({ error: 'Servidor não configurado.' }, { status: 503, headers: CORS })
+
   try {
     const { email, codigo } = await req.json()
 
@@ -35,12 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Registra ativação no banco
-    const supabase = getServiceClient()
-    await supabase.from('activations').insert({
-      email: emailNorm,
-      activated_at: new Date().toISOString(),
-      last_verified_at: new Date().toISOString(),
-    })
+    await prisma.activation.create({ data: { email: emailNorm } })
 
     const token = signMeiToken(emailNorm)
     return NextResponse.json({ token }, { status: 200, headers: CORS })

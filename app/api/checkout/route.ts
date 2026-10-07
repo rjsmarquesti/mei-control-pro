@@ -1,11 +1,12 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { MercadoPagoConfig, Preference } from 'mercadopago'
-import { getUserFromRequest } from '@/lib/supabase-server'
+import { getUserFromRequest } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN ?? ''
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.sismeipro.com.br'
+
+const PLAN_RANK: Record<string, number> = { free: 0, basic: 1, pro: 2, premium: 3 }
 
 const PLAN_PRICES: Record<string, { title: string; price: number; months: number }> = {
   basic:          { title: 'MEI Control Pro — Plano Basic',          price: 19.90,  months: 1  },
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { plan, userEmail } = await req.json()
+    const { plan } = await req.json()
     const userId = authenticatedId
 
     if (!MP_TOKEN) {
@@ -33,6 +34,19 @@ export async function POST(req: NextRequest) {
     const planConfig = PLAN_PRICES[plan]
     if (!planConfig) {
       return NextResponse.json({ error: 'Plano inválido' }, { status: 400 })
+    }
+
+    // Bloquear downgrade: buscar plano atual e comparar com o solicitado
+    const isAnnual = plan.endsWith('_annual')
+    const targetPlan = isAnnual ? plan.replace('_annual', '') : plan
+    const profile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, subscriptionPlan: true, subscriptionExpiresAt: true },
+    })
+    const currentPlan = profile?.subscriptionPlan ?? 'free'
+    const planActive = profile?.subscriptionExpiresAt && profile.subscriptionExpiresAt > new Date()
+    if (planActive && (PLAN_RANK[targetPlan] ?? 0) < (PLAN_RANK[currentPlan] ?? 0)) {
+      return NextResponse.json({ error: 'Não é possível fazer downgrade do plano atual' }, { status: 400 })
     }
 
     const mp = new MercadoPagoConfig({ accessToken: MP_TOKEN })
@@ -47,7 +61,7 @@ export async function POST(req: NextRequest) {
           unit_price: planConfig.price,
           currency_id: 'BRL',
         }],
-        payer: { email: userEmail },
+        payer: { email: profile?.email },
         external_reference: `${userId}|${plan}`,
         back_urls: {
           success: `${APP_URL}/dashboard/assinatura?status=success&plan=${plan}`,
@@ -61,8 +75,9 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ url: result.init_point })
-  } catch (err: any) {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
     console.error('[checkout]', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

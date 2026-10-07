@@ -3,43 +3,44 @@ export const dynamic = 'force-dynamic'
 /**
  * GET /api/leads/status?email=xxx
  * Chamado pelo n8n (workflow nutrição de leads) para verificar se lead converteu.
- * Se o email já existe em profiles → status: 'convertido'
+ * Se o email já existe em users → status: 'convertido'
  * Caso contrário → retorna status atual da tabela leads
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
+
+const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
 
 export async function GET(req: NextRequest) {
+  const secret = req.headers.get('x-n8n-secret')
+  if (!N8N_SECRET || secret !== N8N_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const email = req.nextUrl.searchParams.get('email')
   if (!email) {
     return NextResponse.json({ error: 'email obrigatório' }, { status: 400 })
   }
 
   try {
-    const supabase = getServiceClient()
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, subscriptionPlan: true, status: true },
+    })
 
-    // Verifica se virou cliente (existe em profiles)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, subscription_plan, status')
-      .eq('email', email)
-      .maybeSingle()
-
-    if (profile) {
+    if (user) {
       return NextResponse.json({
         status: 'convertido',
-        plan: profile.subscription_plan ?? 'free',
-        userId: profile.id,
+        plan: user.subscriptionPlan ?? 'free',
+        userId: user.id,
       })
     }
 
-    // Verifica status na tabela leads
-    const { data: lead } = await supabase
-      .from('leads')
-      .select('id, status, created_at')
-      .eq('email', email)
-      .maybeSingle()
+    const lead = await prisma.lead.findUnique({
+      where: { email },
+      select: { id: true, status: true, createdAt: true },
+    })
 
     if (!lead) {
       return NextResponse.json({ status: 'nao_encontrado' })

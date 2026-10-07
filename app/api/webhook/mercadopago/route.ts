@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac } from 'crypto'
 import { MercadoPagoConfig, Payment } from 'mercadopago'
-import { upgradeTenantPlan, logAuditEvent, getTenantByUserId, type TenantPlan } from '@/lib/tenant'
+import { upgradeTenantPlan, type TenantPlan } from '@/lib/tenant'
+import { logSecurityEvent } from '@/lib/audit'
 
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN ?? ''
 const MP_WEBHOOK_SECRET = process.env.MERCADOPAGO_WEBHOOK_SECRET ?? ''
 
 function validateMPSignature(req: NextRequest, rawBody: string): boolean {
-  if (!MP_WEBHOOK_SECRET) return true // sem secret configurado, não bloqueia
+  if (!MP_WEBHOOK_SECRET) return false // sem secret configurado, rejeita tudo
 
   const xSignature = req.headers.get('x-signature') ?? ''
   const xRequestId = req.headers.get('x-request-id') ?? ''
@@ -73,7 +74,6 @@ export async function POST(req: NextRequest) {
     const expires = new Date()
     expires.setDate(expires.getDate() + (isAnnual ? 365 : 30))
 
-    // Atualiza profile — trigger sincroniza tenant + features + JWT automaticamente
     const { ok, error } = await upgradeTenantPlan(userId, plan as TenantPlan, expires.toISOString())
     if (!ok) {
       console.error('[webhook] Erro ao atualizar plano:', error)
@@ -81,18 +81,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Log de auditoria do pagamento
-    const tenant = await getTenantByUserId(userId)
-    if (tenant) {
-      await logAuditEvent({
-        tenantId:   tenant.id,
-        userId,
-        action:     'payment_approved',
-        resource:   'subscription',
-        resourceId: String(payment.id),
-        newData:    { plan, expires_at: expires.toISOString(), payment_id: payment.id },
-        metadata:   { mp_status: payment.status, amount: payment.transaction_amount },
-      })
-    }
+    await logSecurityEvent({
+      userId,
+      action: 'payment_approved',
+      entity_type: 'subscription',
+      entity_id: String(payment.id),
+      after_data: { plan, expires_at: expires.toISOString(), payment_id: payment.id, mp_status: payment.status, amount: payment.transaction_amount },
+    })
 
     console.log(`[webhook] Plano ${plan} ativado para ${userId}`)
     return NextResponse.json({ ok: true })

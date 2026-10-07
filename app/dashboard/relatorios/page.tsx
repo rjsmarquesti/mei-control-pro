@@ -17,7 +17,7 @@ import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
 import { SkeletonChart } from '@/components/ui/SkeletonCard'
-import { supabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/session'
 
 interface Profile { name?: string; email?: string; cnpj?: string; city?: string }
 
@@ -28,11 +28,7 @@ export default function RelatoriosPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return
-      supabase.from('profiles').select('name,email,cnpj,city').eq('id', session.user.id).single()
-        .then(({ data }) => { if (data) setProfile(data) })
-    })
+    authFetch('/api/profile').then(res => res.ok ? res.json() : null).then(data => { if (data) setProfile(data) })
   }, [])
 
   const topMonths = [...chartData].sort((a, b) => b.lucro - a.lucro).slice(0, 5)

@@ -7,14 +7,13 @@ export const dynamic = 'force-dynamic'
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 const MEI_LIMITE_ANUAL = Number(process.env.MEI_LIMITE_ANUAL ?? 81000)
 
-function getMonthRange(month: string): { start: string; end: string } {
+function getMonthRange(month: string): { start: Date; end: Date } {
   const [y, m] = month.split('-').map(Number)
-  const end = new Date(y, m, 0)
-  return { start: `${month}-01`, end: end.toISOString().split('T')[0] }
+  return { start: new Date(`${month}-01`), end: new Date(y, m, 0) }
 }
 
 function formatMonthName(month: string): string {
@@ -30,7 +29,7 @@ const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET ?? ''
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-n8n-secret') ?? ''
-  if (N8N_SECRET && secret !== N8N_SECRET) {
+  if (!N8N_SECRET || secret !== N8N_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -45,24 +44,22 @@ export async function GET(req: NextRequest) {
     const mesNome = formatMonthName(month)
     const year = month.split('-')[0]
 
-    const supabase = getServiceClient()
-
-    const [{ data: rev }, { data: exp }, { data: das }, { data: anual }] = await Promise.all([
-      supabase.from('transactions').select('value').eq('user_id', userId).eq('type', 'revenue').gte('date', start).lte('date', end),
-      supabase.from('transactions').select('value').eq('user_id', userId).eq('type', 'expense').gte('date', start).lte('date', end),
-      supabase.from('das_payments').select('value, status').eq('user_id', userId).eq('competencia', month),
-      supabase.from('transactions').select('value').eq('user_id', userId).eq('type', 'revenue').gte('date', `${year}-01-01`).lte('date', `${year}-12-31`),
+    const [rev, exp, das, anual] = await Promise.all([
+      prisma.transaction.aggregate({ where: { userId, type: 'revenue', date: { gte: start, lte: end } }, _sum: { value: true } }),
+      prisma.transaction.aggregate({ where: { userId, type: 'expense', date: { gte: start, lte: end } }, _sum: { value: true } }),
+      prisma.dasPayment.findMany({ where: { userId, competencia: month }, select: { value: true, status: true } }),
+      prisma.transaction.aggregate({ where: { userId, type: 'revenue', date: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) } }, _sum: { value: true } }),
     ])
 
-    const receitas = (rev ?? []).reduce((acc, t) => acc + Number(t.value), 0)
-    const despesas = (exp ?? []).reduce((acc, t) => acc + Number(t.value), 0)
+    const receitas = Number(rev._sum.value ?? 0)
+    const despesas = Number(exp._sum.value ?? 0)
     const saldo = receitas - despesas
 
-    const das_pagas = (das ?? []).filter(d => d.status === 'paid').reduce((acc, d) => acc + Number(d.value), 0)
-    const das_pendentes = (das ?? []).filter(d => d.status !== 'paid').reduce((acc, d) => acc + Number(d.value), 0)
+    const das_pagas = das.filter(d => d.status === 'paid').reduce((acc, d) => acc + Number(d.value), 0)
+    const das_pendentes = das.filter(d => d.status !== 'paid').reduce((acc, d) => acc + Number(d.value), 0)
     const das_status = das_pagas > 0 ? 'paga ✅' : das_pendentes > 0 ? 'pendente ⚠️' : 'sem registros'
 
-    const receita_anual = (anual ?? []).reduce((acc, t) => acc + Number(t.value), 0)
+    const receita_anual = Number(anual._sum.value ?? 0)
     const percentual_limite = Math.min(Math.round((receita_anual / MEI_LIMITE_ANUAL) * 100), 100)
 
     return NextResponse.json({

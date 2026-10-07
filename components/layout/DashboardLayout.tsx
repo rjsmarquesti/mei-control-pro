@@ -30,7 +30,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [loading, trialExpired, router])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background" style={{ height: '100dvh' }}>
+    <div className="flex overflow-hidden bg-background" style={{ height: '100dvh' }}>
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />

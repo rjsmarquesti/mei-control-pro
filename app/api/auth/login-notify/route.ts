@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 const N8N_BASE = 'https://n8n.divulgabr.com.br'
 
@@ -18,12 +18,7 @@ export async function POST(req: NextRequest) {
     const { userId } = await req.json()
     if (!userId) return NextResponse.json({ ok: false }, { status: 400 })
 
-    const supabase = getServiceClient()
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('name, phone')
-      .eq('id', userId)
-      .single()
+    const profile = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, phone: true } })
 
     const phoneWA = formatPhone(profile?.phone ?? '')
     if (!phoneWA || phoneWA.length < 12) {
@@ -39,7 +34,6 @@ export async function POST(req: NextRequest) {
       timeZone: 'America/Sao_Paulo',
     })
 
-    // fire-and-forget — não aguarda resposta do n8n
     fetch(`${N8N_BASE}/webhook/mei-login-alerta`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -57,7 +51,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true })
   } catch {
-    // nunca bloqueia o login
     return NextResponse.json({ ok: true })
   }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { authFetch, getAccessToken, logout as sessionLogout } from '@/lib/session'
 import { useAppStore } from '@/store/useAppStore'
 
 export function useAuth() {
@@ -10,40 +10,29 @@ export function useAuth() {
   const setUser = useAppStore((s) => s.setUser)
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
+    const token = getAccessToken()
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    authFetch('/api/profile').then(async (res) => {
+      if (!res.ok) {
         router.push('/login')
         return
       }
-
-      const u = session.user
-
-      // Try to load profile from database
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', u.id)
-        .single()
-
+      const profile = await res.json()
       setUser({
-        id: u.id,
-        name: profile?.name ?? u.user_metadata?.name ?? u.email?.split('@')[0] ?? 'Usuário',
-        email: u.email ?? '',
-        company: profile?.company ?? u.user_metadata?.company ?? 'Minha Empresa',
-        meiSince: profile?.mei_since ?? u.user_metadata?.meiSince ?? new Date().getFullYear().toString(),
+        id: profile.id ?? '',
+        name: profile.name ?? profile.email?.split('@')[0] ?? 'Usuário',
+        email: profile.email ?? '',
+        company: profile.company ?? 'Minha Empresa',
+        meiSince: profile.mei_since ?? new Date().getFullYear().toString(),
       })
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
-        router.push('/login')
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    }).catch(() => router.push('/login'))
   }, [router, setUser])
 }
 
 export async function signOut() {
-  await supabase.auth.signOut()
+  await sessionLogout()
 }

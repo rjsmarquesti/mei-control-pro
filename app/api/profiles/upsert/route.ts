@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient, getUserFromRequest } from '@/lib/supabase-server'
+import { getUserFromRequest } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,52 +11,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const supabase = getServiceClient()
     const { id, name, email, phone, city } = await req.json()
 
     if (!id || !email) return NextResponse.json({ error: 'id e email obrigatórios' }, { status: 400 })
 
-    // Garante que o id do body pertence ao usuário autenticado
     if (id !== authenticatedId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
     }
 
-    const trialExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-    const now = new Date().toISOString()
+    await prisma.user.update({
+      where: { id },
+      data: { name: name || null, phone: phone || null, city: city || null },
+    })
 
-    // Verifica se já existe profile (upsert em novo usuário vs. atualização)
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', id)
-      .single()
-
-    const isNew = !existing
-
-    const upsertData: Record<string, unknown> = {
-      id,
-      name: name || null,
-      email,
-      phone: phone || null,
-      city: city || null,
-      role: 'user',
-      updated_at: now,
-    }
-
-    if (isNew) {
-      // Novo usuário: trial premium 7 dias
-      upsertData.status = 'active'
-      upsertData.subscription_plan = 'premium'
-      upsertData.subscription_expires_at = trialExpires
-      upsertData.is_trial = true
-      upsertData.trial_started_at = now
-    }
-
-    const { error } = await supabase.from('profiles').upsert(upsertData, { onConflict: 'id' })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

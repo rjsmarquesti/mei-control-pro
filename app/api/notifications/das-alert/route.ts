@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/notifications/das-alert
@@ -8,43 +8,43 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 const N8N_WEBHOOK = 'https://n8n.divulgabr.com.br/webhook/mei-das-alerta'
+const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
 const ALERT_DAYS = [15, 7, 1]
 
 export async function POST(req: NextRequest) {
+  const secret = req.headers.get('x-n8n-secret')
+  if (!N8N_SECRET || secret !== N8N_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
-    const supabase = getServiceClient()
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Busca todos os assinantes pagantes com perfil
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, name, email, phone, cnpj')
-      .in('subscription_plan', ['pro', 'premium'])
+    const profiles = await prisma.user.findMany({
+      where: { subscriptionPlan: { in: ['pro', 'premium'] } },
+      select: { id: true, name: true, email: true, phone: true, cnpj: true },
+    })
 
-    if (!profiles || profiles.length === 0) return NextResponse.json({ ok: true, sent: 0 })
+    if (profiles.length === 0) return NextResponse.json({ ok: true, sent: 0 })
 
     let sent = 0
 
     for (const profile of profiles) {
-      // Busca DAS pendentes do usuário
-      const { data: dasList } = await supabase
-        .from('das_payments')
-        .select('id, due_date, value, competencia, status')
-        .eq('user_id', profile.id)
-        .in('status', ['pending', 'overdue'])
-        .order('due_date', { ascending: true })
+      const dasList = await prisma.dasPayment.findMany({
+        where: { userId: profile.id, status: { in: ['pending', 'overdue'] } },
+        orderBy: { dueDate: 'asc' },
+      })
 
-      if (!dasList || dasList.length === 0) continue
+      if (dasList.length === 0) continue
 
       for (const das of dasList) {
-        const dueDate = new Date(das.due_date + 'T12:00:00')
+        const dueDate = new Date(das.dueDate)
         const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-        // Dispara apenas nas datas certas (15, 7, 1 dia antes) ou se já vencido
         const shouldAlert = ALERT_DAYS.includes(diffDays) || das.status === 'overdue'
         if (!shouldAlert) continue
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
           email: profile.email,
           phone: profile.phone,
           cnpj: profile.cnpj ?? '',
-          das_id: das.id,
+          das_id: das.id.toString(),
           das_valor: das.value,
           das_vencimento: dueDate.toLocaleDateString('pt-BR'),
           das_competencia: das.competencia ?? '',
@@ -62,7 +62,6 @@ export async function POST(req: NextRequest) {
           link: 'https://app.sismeipro.com.br/dashboard/das',
         }
 
-        // Dispara webhook n8n (não bloqueia se falhar)
         try {
           await fetch(N8N_WEBHOOK, {
             method: 'POST',
@@ -75,7 +74,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, sent })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

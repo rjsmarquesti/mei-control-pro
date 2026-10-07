@@ -1,42 +1,46 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient, getUserFromRequest } from '@/lib/supabase-server'
+import { getUserFromRequest } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   try {
     const userId = await getUserFromRequest(req)
     if (!userId) return NextResponse.json({ plan: 'free', expires_at: null, is_trial: false, status: 'active' })
 
-    const supabase = getServiceClient()
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('subscription_plan, subscription_expires_at, is_trial, status')
-      .eq('id', userId)
-      .single()
+    const data = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionPlan: true, subscriptionExpiresAt: true, isTrial: true, status: true, trialActivatedAt: true },
+    })
 
-    if (error || !data) return NextResponse.json({ plan: 'free', expires_at: null, is_trial: false, status: 'active' })
+    if (!data) return NextResponse.json({ plan: 'free', expires_at: null, is_trial: false, status: 'active' })
 
-    const expires = data.subscription_expires_at
+    const expires = data.subscriptionExpiresAt
     const status = data.status ?? 'active'
 
     // Trial expirado: plano free, status trial_expired
     const trialExpired =
       status === 'trial_expired' ||
-      (data.is_trial && expires && new Date(expires) < new Date())
+      (data.isTrial && expires && expires < new Date())
 
-    const rawPlan = trialExpired ? 'free' : (data.subscription_plan ?? 'free')
+    const rawPlan = trialExpired ? 'free' : (data.subscriptionPlan ?? 'free')
     const VALID_PLANS = ['free', 'basic', 'pro', 'premium']
     const plan = VALID_PLANS.includes(rawPlan) ? rawPlan : 'premium'
 
+    const isTrial = data.isTrial ?? false
+    const trialEligible = !isTrial && plan === 'free' && !data.trialActivatedAt && status !== 'trial_expired'
+
     return NextResponse.json({
       plan,
-      expires_at: expires ?? null,
-      is_trial: data.is_trial ?? false,
+      expires_at: expires?.toISOString() ?? null,
+      is_trial: isTrial,
       status: trialExpired ? 'trial_expired' : status,
+      trial_eligible: trialEligible,
     })
-  } catch (e: any) {
-    console.error('[POST /api/me/plan]', e.message)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Erro desconhecido'
+    console.error('[POST /api/me/plan]', msg)
     return NextResponse.json({ plan: 'free', expires_at: null, is_trial: false, status: 'active' })
   }
 }

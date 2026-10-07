@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { authFetch, getAccessToken } from '@/lib/session'
 
 export type SearchResultType = 'transaction' | 'page' | 'das' | 'category'
 
@@ -38,42 +38,20 @@ export function useSearch() {
 
     setLoading(true)
 
-    // Pages match
     const pageResults = PAGES.filter(p =>
       p.title.toLowerCase().includes(q) || p.subtitle.toLowerCase().includes(q)
     )
 
-    // DB queries in parallel
-    const { data: { session } } = await supabase.auth.getSession()
-    const userId = session?.user?.id
-
-    if (!userId) {
+    if (!getAccessToken()) {
       setResults(pageResults.slice(0, 8))
       setLoading(false)
       return
     }
 
-    const [{ data: txData }, { data: dasData }, { data: catData }] = await Promise.all([
-      supabase
-        .from('transactions')
-        .select('id,description,category,value,type,date')
-        .eq('user_id', userId)
-        .ilike('description', `%${q}%`)
-        .limit(5),
-      supabase
-        .from('das_payments')
-        .select('id,due_date,value,status')
-        .eq('user_id', userId)
-        .limit(3),
-      supabase
-        .from('categories')
-        .select('id,name,type')
-        .eq('user_id', userId)
-        .ilike('name', `%${q}%`)
-        .limit(3),
-    ])
+    const res = await authFetch(`/api/search?q=${encodeURIComponent(q)}`)
+    const data = res.ok ? await res.json() : { transactions: [], dasPayments: [], categories: [] }
 
-    const txResults: SearchResult[] = (txData ?? []).map(tx => ({
+    const txResults: SearchResult[] = (data.transactions ?? []).map((tx: { id: string; description: string; category: string; value: number; type: string; date: string }) => ({
       id: tx.id,
       type: 'transaction',
       title: tx.description,
@@ -83,12 +61,12 @@ export function useSearch() {
       badgeColor: tx.type === 'revenue' ? '#10B981' : '#EF4444',
     }))
 
-    const dasResults: SearchResult[] = (dasData ?? [])
-      .filter(d => {
+    const dasResults: SearchResult[] = (data.dasPayments ?? [])
+      .filter((d: { due_date: string; status: string }) => {
         const month = new Date(d.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
         return month.toLowerCase().includes(q) || d.status.includes(q)
       })
-      .map(d => ({
+      .map((d: { id: string; due_date: string; value: number; status: string }) => ({
         id: d.id,
         type: 'das',
         title: `DAS – ${new Date(d.due_date + 'T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`,
@@ -98,7 +76,7 @@ export function useSearch() {
         badgeColor: '#F59E0B',
       }))
 
-    const catResults: SearchResult[] = (catData ?? []).map(c => ({
+    const catResults: SearchResult[] = (data.categories ?? []).map((c: { id: string; name: string; type: string }) => ({
       id: c.id,
       type: 'category',
       title: c.name,
@@ -108,8 +86,7 @@ export function useSearch() {
       badgeColor: '#8B5CF6',
     }))
 
-    const all = [...pageResults, ...txResults, ...dasResults, ...catResults].slice(0, 10)
-    setResults(all)
+    setResults([...pageResults, ...txResults, ...dasResults, ...catResults].slice(0, 10))
     setLoading(false)
   }, [])
 

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { RefreshCw, Search, Phone, MapPin, Trash2, UserPlus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 import { useAdmin } from '@/hooks/useAdmin'
 
 interface Lead {

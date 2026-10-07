@@ -1,14 +1,22 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, Loader2, CheckCircle, Lock, ShieldCheck, KeyRound } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 
 export default function NovaSenhaPage() {
+  return (
+    <Suspense fallback={null}>
+      <NovaSenhaContent />
+    </Suspense>
+  )
+}
+
+function NovaSenhaContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -20,21 +28,19 @@ export default function NovaSenhaPage() {
   const [recoveryToken, setRecoveryToken] = useState('')
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session?.access_token) {
-        setRecoveryToken(session.access_token)
-        setReady(true)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
+    const token = searchParams.get('token')
+    if (token) {
+      setRecoveryToken(token)
+      setReady(true)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.')
+    if (password.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres.')
       return
     }
     if (password !== confirm) {
@@ -50,23 +56,16 @@ export default function NovaSenhaPage() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('/api/auth/update-password', {
+      const res = await fetch('/api/auth/reset-password/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, accessToken: recoveryToken }),
+        body: JSON.stringify({ token: recoveryToken, password }),
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        const msg: string = (data.error ?? '').toLowerCase()
-        if (msg.includes('different') || msg.includes('same') || msg.includes('old password') || res.status === 422) {
-          setError('A nova senha não pode ser igual à senha atual.')
-        } else if (msg.includes('expir') || msg.includes('invalid') || msg.includes('token')) {
-          setError('Link expirado. Solicite um novo link de recuperação.')
-        } else {
-          setError('Erro ao salvar a senha. Tente novamente.')
-        }
+        setError(data.error ?? 'Erro ao salvar a senha. Tente novamente.')
       } else {
         setDone(true)
       }
@@ -259,7 +258,7 @@ export default function NovaSenhaPage() {
                         onChange={e => setPassword(e.target.value)}
                         placeholder="••••••••"
                         required
-                        minLength={6}
+                        minLength={8}
                         className="input-field pr-10"
                       />
                       <button
@@ -301,7 +300,7 @@ export default function NovaSenhaPage() {
                         onChange={e => setConfirm(e.target.value)}
                         placeholder="••••••••"
                         required
-                        minLength={6}
+                        minLength={8}
                         className="input-field pr-10"
                       />
                       <button

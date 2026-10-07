@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 const FALLBACK = {
   valorDAS: 75.90,
@@ -17,16 +17,12 @@ const FALLBACK = {
 
 export async function GET() {
   try {
-    const supabase = getServiceClient()
-    const { data, error } = await supabase
-      .from('system_settings')
-      .select('key, value')
-      .in('key', ['das_default_value', 'mei_limite_anual', 'irpf_tabela'])
-
-    if (error || !data) return NextResponse.json(FALLBACK)
+    const rows = await prisma.systemSetting.findMany({
+      where: { key: { in: ['das_default_value', 'mei_limite_anual', 'irpf_tabela'] } },
+    })
 
     const map: Record<string, string> = {}
-    data.forEach(row => { map[row.key] = row.value })
+    rows.forEach(row => { map[row.key] = row.value })
 
     let tabelaIRPF = FALLBACK.tabelaIRPF
     if (map['irpf_tabela']) {

@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
+import { hashPassword } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req)
@@ -12,43 +13,26 @@ export async function POST(req: NextRequest) {
     const { name, email, password, phone, city, plan = 'free' } = await req.json()
     if (!email || !password) return NextResponse.json({ error: 'Email e senha obrigatórios' }, { status: 400 })
 
-    const supabase = getServiceClient()
+    const passwordHash = await hashPassword(password)
+    const expires = plan !== 'free' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null
 
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { name, phone, city },
+    const user = await prisma.user.create({
+      data: {
+        email, name: name || null, phone: phone || null, city: city || null, passwordHash,
+        role: 'user', status: 'active', subscriptionPlan: plan, subscriptionExpiresAt: expires,
+        emailConfirmedAt: new Date(),
+      },
     })
 
-    if (authError) return NextResponse.json({ error: authError.message }, { status: 400 })
-
-    const userId = authData.user.id
-    const expires = plan !== 'free' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null
-
-    // Create profile
-    await supabase.from('profiles').upsert({
-      id: userId,
-      name: name || null,
-      email,
-      phone: phone || null,
-      city: city || null,
-      role: 'user',
-      status: 'active',
-      subscription_plan: plan,
-      subscription_expires_at: expires,
-      updated_at: new Date().toISOString(),
+    await prisma.lead.upsert({
+      where: { email },
+      create: { name, email, phone, city, status: 'novo', notes: 'Criado pelo admin' },
+      update: { name, phone, city, status: 'novo', notes: 'Criado pelo admin', updatedAt: new Date() },
     })
 
-    // Create lead
-    await supabase.from('leads').upsert(
-      { name, email, phone, city, status: 'novo', notes: 'Criado pelo admin', updated_at: new Date().toISOString() },
-      { onConflict: 'email' }
-    )
-
-    return NextResponse.json({ ok: true, userId })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ ok: true, userId: user.id })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

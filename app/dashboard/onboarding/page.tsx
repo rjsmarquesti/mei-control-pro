@@ -5,14 +5,13 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Building2, FileText, Tag, Calendar, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { authFetch, getAccessToken } from '@/lib/session'
 import { useRouter } from 'next/navigation'
 
 export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const [form, setForm] = useState({
     company: '',
     cnpj: '',
@@ -21,13 +20,7 @@ export default function OnboardingPage() {
   })
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push('/login')
-        return
-      }
-      setUserId(session.user.id)
-    })
+    if (!getAccessToken()) router.push('/login')
   }, [router])
 
   const formatCnpj = (value: string) => {
@@ -42,16 +35,13 @@ export default function OnboardingPage() {
   const handleSkip = () => router.push('/dashboard')
 
   const handleSave = async () => {
-    if (!userId) return
     setIsLoading(true)
     try {
-      await supabase.from('profiles').update({
-        company: form.company,
-        cnpj: form.cnpj,
-        activity: form.activity,
-        mei_since: form.meiSince,
-        updated_at: new Date().toISOString(),
-      }).eq('id', userId)
+      await authFetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company: form.company, cnpj: form.cnpj, activity: form.activity, mei_since: form.meiSince }),
+      })
       setStep(3)
       setTimeout(() => router.push('/dashboard'), 2000)
     } catch {

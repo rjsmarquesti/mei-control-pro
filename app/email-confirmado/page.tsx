@@ -1,25 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
+// Nota: com auto-confirmação no cadastro, essa página não é mais linkada
+// pelo fluxo real de nenhum lugar — mantida por compatibilidade com bookmarks antigos.
 export default function EmailConfirmadoPage() {
   const router = useRouter()
-  const [confirming, setConfirming] = useState(true)
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') {
-        setConfirming(false)
-      }
-    })
-    // Também verifica se já há sessão ativa (caso o redirect já trouxe o token)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setConfirming(false)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   return (
     <div style={{
@@ -36,13 +22,11 @@ export default function EmailConfirmadoPage() {
         width: '100%',
         textAlign: 'center'
       }}>
-        {/* Logo */}
         <div style={{ marginBottom: 24 }}>
           <img src="/logo.webp" width={48} height={48} alt="MEI Control Pro"
             style={{ borderRadius: 12, display: 'inline-block' }} />
         </div>
 
-        {/* Ícone */}
         <div style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: 72, height: 72, borderRadius: '50%',
@@ -52,12 +36,12 @@ export default function EmailConfirmadoPage() {
         }}>✅</div>
 
         <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 700, margin: '0 0 12px', letterSpacing: '-0.3px' }}>
-          Email confirmado!
+          Sua conta já está ativa!
         </h1>
 
         <p style={{ color: '#9ca3c8', fontSize: 14, lineHeight: 1.7, margin: '0 0 32px' }}>
-          Sua conta foi ativada com sucesso.<br />
-          Clique abaixo para acessar o MEI Control Pro.
+          Cadastros no MEI Control Pro são ativados automaticamente.<br />
+          Clique abaixo para acessar o sistema.
         </p>
 
         <button

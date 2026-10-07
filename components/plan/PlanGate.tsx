@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Lock, ArrowRight, Sparkles } from 'lucide-react'
+import { Lock, ArrowRight, Sparkles, Zap } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { type Plan, getPlanConfig, hasAccess } from '@/lib/plans'
 import { usePlan } from '@/hooks/usePlan'
+import { authFetch } from '@/lib/session'
 
 interface PlanGateProps {
   requiredPlan: Plan
@@ -13,7 +16,19 @@ interface PlanGateProps {
 }
 
 export function PlanGate({ requiredPlan, children, featureName }: PlanGateProps) {
-  const { plan, loading } = usePlan()
+  const { plan, loading, trialEligible } = usePlan()
+  const [activating, setActivating] = useState(false)
+  const router = useRouter()
+
+  async function activateTrial() {
+    setActivating(true)
+    try {
+      const res = await authFetch('/api/trial/activate', { method: 'POST' })
+      if (res.ok) router.refresh()
+    } finally {
+      setActivating(false)
+    }
+  }
 
   if (loading) return null
 
@@ -62,18 +77,36 @@ export function PlanGate({ requiredPlan, children, featureName }: PlanGateProps)
         </p>
       </div>
 
-      <Link href="/dashboard/assinatura">
-        <button
-          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-          style={{ background: required.color, boxShadow: `0 4px 16px ${required.color}40` }}
-        >
-          Fazer upgrade <ArrowRight size={15} />
-        </button>
-      </Link>
-
-      <p className="text-xs text-muted-foreground mt-4">
-        Cancele quando quiser · Sem fidelidade
-      </p>
+      {trialEligible ? (
+        <>
+          <button
+            onClick={activateTrial}
+            disabled={activating}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+            style={{ background: '#7C3AED', boxShadow: '0 4px 16px #7C3AED40' }}
+          >
+            <Zap size={15} />
+            {activating ? 'Ativando...' : 'Ativar 30 dias grátis'}
+          </button>
+          <p className="text-xs text-muted-foreground mt-4">
+            Sem cartão · Acesso completo por 30 dias
+          </p>
+        </>
+      ) : (
+        <>
+          <Link href="/dashboard/assinatura">
+            <button
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+              style={{ background: required.color, boxShadow: `0 4px 16px ${required.color}40` }}
+            >
+              Fazer upgrade <ArrowRight size={15} />
+            </button>
+          </Link>
+          <p className="text-xs text-muted-foreground mt-4">
+            Cancele quando quiser · Sem fidelidade
+          </p>
+        </>
+      )}
     </motion.div>
   )
 }

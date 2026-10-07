@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 
 const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
 const N8N_TRIAL_WEBHOOK = 'https://n8n.divulgabr.com.br/webhook/mei-trial'
@@ -25,7 +25,6 @@ function formatPhone(phone: string): string {
   return ''
 }
 
-// Verifica se o tipo de notificação foi enviado nos últimos N dias
 function notifiedRecently(notified: Record<string, string>, tipo: string, days: number): boolean {
   const last = notified?.[tipo]
   if (!last) return false
@@ -35,31 +34,60 @@ function notifiedRecently(notified: Record<string, string>, tipo: string, days: 
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-n8n-secret')
-  if (N8N_SECRET && secret !== N8N_SECRET) {
+  if (!N8N_SECRET || secret !== N8N_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const supabase = getServiceClient()
     const now = new Date()
     const events: object[] = []
 
     // ── Busca assinantes pagos ativos + trials ativos ──────────────
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('id, name, email, phone, cnpj, subscription_plan, subscription_expires_at, is_trial, status, last_seen_at, lifecycle_notified, created_at')
-      .or('and(subscription_plan.in.(basic,pro,premium),status.eq.active,is_trial.eq.false),and(is_trial.eq.true,status.eq.active)')
+    const profiles = await prisma.user.findMany({
+      where: {
+        OR: [
+          { subscriptionPlan: { in: ['basic', 'pro', 'premium'] }, status: 'active', isTrial: false },
+          { isTrial: true, status: 'active' },
+        ],
+      },
+      select: {
+        id: true, name: true, email: true, phone: true, cnpj: true, subscriptionPlan: true,
+        subscriptionExpiresAt: true, isTrial: true, status: true, lastSeenAt: true,
+        lifecycleNotified: true, createdAt: true, trialActivatedAt: true,
+      },
+    })
 
-    if (error) throw new Error(error.message)
-    if (!profiles?.length) return NextResponse.json({ ok: true, events: [] })
+    if (!profiles.length) return NextResponse.json({ ok: true, events: [] })
 
     const year = now.getFullYear().toString()
 
+    // Batch: busca receita anual de todos os assinantes pagos não-trial de uma vez
+    const paidProfiles = profiles.filter(p => !p.isTrial)
+    const limiteCandidateIds = paidProfiles
+      .filter(p => !notifiedRecently((p.lifecycleNotified as Record<string, string>) ?? {}, 'limite_mei', 30))
+      .map(p => p.id)
+
+    const revenueByUser = new Map<string, number>()
+    if (limiteCandidateIds.length > 0) {
+      const revenueRows = await prisma.transaction.groupBy({
+        by: ['userId'],
+        where: {
+          userId: { in: limiteCandidateIds },
+          type: 'revenue',
+          status: 'completed',
+          date: { gte: new Date(`${year}-01-01`), lte: new Date(`${year}-12-31`) },
+        },
+        _sum: { value: true },
+      })
+      for (const row of revenueRows) {
+        revenueByUser.set(row.userId, Number(row._sum.value ?? 0))
+      }
+    }
+
     for (const p of profiles) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const notified: Record<string, string> = (p.lifecycle_notified as any) ?? {}
+      const notified: Record<string, string> = (p.lifecycleNotified as Record<string, string>) ?? {}
       const phoneWA = formatPhone(p.phone ?? '')
-      const isTrial = (p as any).is_trial ?? false
+      const isTrial = p.isTrial ?? false
       const base = {
         userId: p.id,
         nome: p.name ?? 'MEI',
@@ -67,69 +95,89 @@ export async function POST(req: NextRequest) {
         phone: p.phone ?? '',
         phoneWA,
         hasPhone: phoneWA.length >= 12,
-        plano: p.subscription_plan,
+        plano: p.subscriptionPlan,
         is_trial: isTrial,
       }
 
       // ── [TRIAL] Eventos exclusivos de trial ───────────────────────
-      if (isTrial && p.subscription_expires_at) {
-        const trialExpiresAt = new Date(p.subscription_expires_at)
+      if (isTrial && p.subscriptionExpiresAt) {
+        const trialExpiresAt = p.subscriptionExpiresAt
         const daysUntil = Math.ceil((trialExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
-        // Trial expirando em ≤2 dias (notificar 1x)
-        if (daysUntil > 0 && daysUntil <= 2 && !notifiedRecently(notified, 'trial_expirando', 7)) {
+        const trialActivatedAt = p.trialActivatedAt
+        if (trialActivatedAt) {
+          const daysSince = Math.floor((now.getTime() - trialActivatedAt.getTime()) / (1000 * 60 * 60 * 24))
+
+          if (daysSince >= 2 && daysSince <= 4 && !notifiedRecently(notified, 'trial_d3', 2)) {
+            events.push({
+              ...base, tipo: 'trial_d3',
+              dados: { dias_restantes: daysUntil, data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'), link_planos: 'https://app.sismeipro.com.br/dashboard/assinatura' },
+            })
+          }
+          if (daysSince >= 6 && daysSince <= 8 && !notifiedRecently(notified, 'trial_d7', 2)) {
+            events.push({
+              ...base, tipo: 'trial_d7',
+              dados: { dias_restantes: daysUntil, data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'), link_planos: 'https://app.sismeipro.com.br/dashboard/assinatura' },
+            })
+          }
+          if (daysSince >= 13 && daysSince <= 15 && !notifiedRecently(notified, 'trial_d14', 2)) {
+            events.push({
+              ...base, tipo: 'trial_d14',
+              dados: { dias_restantes: daysUntil, data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'), link_planos: 'https://app.sismeipro.com.br/dashboard/assinatura' },
+            })
+          }
+        }
+
+        if (daysUntil > 2 && daysUntil <= 9 && !notifiedRecently(notified, 'trial_7d', 7)) {
           events.push({
-            ...base,
-            tipo: 'trial_expirando',
-            dados: {
-              dias_restantes: daysUntil,
-              data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'),
-              link_planos: 'https://app.sismeipro.com.br/dashboard/assinatura',
-            },
+            ...base, tipo: 'trial_7d',
+            dados: { dias_restantes: daysUntil, data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'), link_planos: 'https://app.sismeipro.com.br/dashboard/assinatura' },
           })
         }
 
-        // Trial expirado há 0-1 dias → atualizar status e notificar
-        if (daysUntil <= 0 && !notifiedRecently(notified, 'trial_expirado', 2)) {
-          // Marcar status como trial_expired e downgrade para free
-          await supabase.from('profiles').update({
-            status: 'trial_expired',
-            subscription_plan: 'free',
-            is_trial: false,
-          }).eq('id', p.id)
-
+        if (daysUntil > 0 && daysUntil <= 2 && !notifiedRecently(notified, 'trial_expirando', 7)) {
           events.push({
-            ...base,
-            tipo: 'trial_expirado',
-            dados: {
-              data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'),
-              link_planos: 'https://app.sismeipro.com.br/trial-expirado',
-            },
+            ...base, tipo: 'trial_expirando',
+            dados: { dias_restantes: daysUntil, data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'), link_planos: 'https://app.sismeipro.com.br/dashboard/assinatura' },
           })
+        }
+
+        if (daysUntil <= 0 && !notifiedRecently(notified, 'trial_expirado', 2)) {
+          const trialPayload = {
+            ...base, tipo: 'trial_expirado',
+            dados: { data_expiracao: trialExpiresAt.toLocaleDateString('pt-BR'), link_planos: 'https://app.sismeipro.com.br/trial-expirado' },
+          }
+
+          try {
+            await fetch(N8N_TRIAL_WEBHOOK, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(trialPayload),
+            })
+          } catch { /* n8n offline — downgrade ainda ocorre */ }
+
+          await prisma.user.update({
+            where: { id: p.id },
+            data: { status: 'trial_expired', subscriptionPlan: 'free', isTrial: false },
+          })
+
+          events.push(trialPayload)
         }
       }
 
-      // Pular demais eventos para usuários em trial (não são assinantes pagos)
+      // Pular demais eventos para usuários em trial
       if (isTrial) continue
 
       // ── [A] Plano expirando em ≤5 dias ────────────────────────────
-      if (p.subscription_expires_at) {
-        const expiresAt = new Date(p.subscription_expires_at)
+      if (p.subscriptionExpiresAt) {
+        const expiresAt = p.subscriptionExpiresAt
         const daysUntil = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
         if (daysUntil > 0 && daysUntil <= 5 && !notifiedRecently(notified, 'plano_expirando', 4)) {
           events.push({
-            ...base,
-            tipo: 'plano_expirando',
-            dados: {
-              dias_restantes: daysUntil,
-              data_expiracao: expiresAt.toLocaleDateString('pt-BR'),
-              link_renovacao: 'https://app.sismeipro.com.br/dashboard/assinatura',
-            },
+            ...base, tipo: 'plano_expirando',
+            dados: { dias_restantes: daysUntil, data_expiracao: expiresAt.toLocaleDateString('pt-BR'), link_renovacao: 'https://app.sismeipro.com.br/dashboard/assinatura' },
           })
         }
 
-        // ── [B] Plano expirado (D0, D3, D7) ──────────────────────────
         if (daysUntil <= 0) {
           const daysExpired = Math.abs(daysUntil)
           const alreadyD0 = notifiedRecently(notified, 'plano_expirado_d0', 2)
@@ -143,36 +191,22 @@ export async function POST(req: NextRequest) {
 
           if (subTipo) {
             events.push({
-              ...base,
-              tipo: subTipo,
-              dados: {
-                dias_expirado: daysExpired,
-                data_expiracao: expiresAt.toLocaleDateString('pt-BR'),
-                link_renovacao: 'https://app.sismeipro.com.br/dashboard/assinatura',
-              },
+              ...base, tipo: subTipo,
+              dados: { dias_expirado: daysExpired, data_expiracao: expiresAt.toLocaleDateString('pt-BR'), link_renovacao: 'https://app.sismeipro.com.br/dashboard/assinatura' },
             })
           }
         }
       }
 
       // ── [C] Receita anual ≥ 75% do limite MEI ──────────────────────
-      if (!notifiedRecently(notified, 'limite_mei', 30)) {
-        const { data: anual } = await supabase
-          .from('transactions')
-          .select('value')
-          .eq('user_id', p.id)
-          .eq('type', 'revenue')
-          .gte('date', `${year}-01-01`)
-          .lte('date', `${year}-12-31`)
-
-        const receita_anual = (anual ?? []).reduce((acc, t) => acc + Number(t.value), 0)
+      if (revenueByUser.has(p.id)) {
+        const receita_anual = revenueByUser.get(p.id)!
         const pct = receita_anual / MEI_LIMITE_ANUAL
 
         if (pct >= LIMITE_ALERTA_PCT) {
           const percentual = Math.round(pct * 100)
           events.push({
-            ...base,
-            tipo: 'limite_mei',
+            ...base, tipo: 'limite_mei',
             dados: {
               receita_anual: `R$ ${receita_anual.toFixed(2).replace('.', ',')}`,
               percentual,
@@ -183,51 +217,40 @@ export async function POST(req: NextRequest) {
       }
 
       // ── [D] Inativo há ≥7 dias ─────────────────────────────────────
-      if (p.last_seen_at && !notifiedRecently(notified, 'inativo', 14)) {
-        const lastSeen = new Date(p.last_seen_at)
+      if (p.lastSeenAt && !notifiedRecently(notified, 'inativo', 14)) {
+        const lastSeen = p.lastSeenAt
         const daysInactive = Math.floor((now.getTime() - lastSeen.getTime()) / (1000 * 60 * 60 * 24))
 
         if (daysInactive >= 7) {
           events.push({
-            ...base,
-            tipo: 'inativo',
-            dados: {
-              dias_inativo: daysInactive,
-              ultimo_acesso: lastSeen.toLocaleDateString('pt-BR'),
-              link_app: 'https://app.sismeipro.com.br/dashboard',
-            },
+            ...base, tipo: 'inativo',
+            dados: { dias_inativo: daysInactive, ultimo_acesso: lastSeen.toLocaleDateString('pt-BR'), link_app: 'https://app.sismeipro.com.br/dashboard' },
           })
         }
       }
 
       // ── [E] Marco de 30 dias como cliente ──────────────────────────
-      if (p.created_at && !notifiedRecently(notified, 'marco_30d', 365)) {
-        const createdAt = new Date(p.created_at)
+      if (p.createdAt && !notifiedRecently(notified, 'marco_30d', 365)) {
+        const createdAt = p.createdAt
         const daysSince = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
 
         if (daysSince >= 29 && daysSince <= 31) {
           events.push({
-            ...base,
-            tipo: 'marco_30d',
-            dados: {
-              dias_como_cliente: daysSince,
-              link_app: 'https://app.sismeipro.com.br/dashboard',
-            },
+            ...base, tipo: 'marco_30d',
+            dados: { dias_como_cliente: daysSince, link_app: 'https://app.sismeipro.com.br/dashboard' },
           })
         }
       }
     }
 
-    // Disparar eventos de trial para o n8n
-    const trialEvents = events.filter((e: any) =>
-      e.tipo === 'trial_expirando' || e.tipo === 'trial_expirado'
+    // Disparar eventos de trial para o n8n (trial_expirado já é enviado inline acima)
+    const trialEvents = events.filter((e): e is { tipo: string } & Record<string, unknown> =>
+      ['trial_d3', 'trial_d7', 'trial_d14', 'trial_7d', 'trial_expirando'].includes((e as { tipo: string }).tipo)
     )
     for (const ev of trialEvents) {
       try {
         await fetch(N8N_TRIAL_WEBHOOK, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(ev),
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ev),
         })
       } catch {
         // Nunca bloquear o lifecycle por falha no webhook

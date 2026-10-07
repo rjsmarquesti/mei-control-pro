@@ -14,7 +14,7 @@ import { useDashboard } from '@/hooks/useDashboard'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/utils'
 import { financeService } from '@/services/finance'
-import { supabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/session'
 import type { Transaction } from '@/types'
 
 interface Profile { name?: string; email?: string; cnpj?: string; city?: string }
@@ -28,11 +28,9 @@ export default function ReceitasPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return
-      supabase.from('profiles').select('name,email,cnpj,city').eq('id', session.user.id).single()
-        .then(({ data }) => { if (data) setProfile(data) })
-    })
+    if (new URLSearchParams(window.location.search).get('novo') === '1') setIsModalOpen(true)
+
+    authFetch('/api/profile').then(res => res.ok ? res.json() : null).then(data => { if (data) setProfile(data) })
   }, [])
 
   const revenues = transactions.filter((t) => t.type === 'revenue')

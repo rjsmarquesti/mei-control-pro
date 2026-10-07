@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { User, Mail, Phone, MapPin, Building2, Calendar, Save, Loader2, Key } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { useAppStore } from '@/store/useAppStore'
-import { supabase } from '@/lib/supabase'
+import { authFetch, decodeAccessToken } from '@/lib/session'
 
 export default function PerfilPage() {
   const { brandSettings, setUser } = useAppStore()
@@ -15,7 +15,6 @@ export default function PerfilPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const [userId, setUserId] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     name: '', email: '', phone: '', cnpj: '',
@@ -29,49 +28,40 @@ export default function PerfilPage() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      setUserId(session.user.id)
+      const res = await authFetch('/api/profile')
+      if (!res.ok) return
+      const data = await res.json()
 
-      const { data } = await supabase
-        .from('profiles')
-        .select('name,email,phone,city,company,mei_since,cnpj,activity')
-        .eq('id', session.user.id)
-        .single()
-
-      if (data) {
-        setForm({
-          name: data.name ?? '',
-          email: data.email ?? session.user.email ?? '',
-          phone: data.phone ?? '',
-          cnpj: data.cnpj ?? '',
-          company: data.company ?? '',
-          activity: data.activity ?? '',
-          city: data.city ?? '',
-          meiSince: data.mei_since ?? '',
-        })
-      }
+      setForm({
+        name: data.name ?? '',
+        email: data.email ?? '',
+        phone: data.phone ?? '',
+        cnpj: data.cnpj ?? '',
+        company: data.company ?? '',
+        activity: data.activity ?? '',
+        city: data.city ?? '',
+        meiSince: data.mei_since ?? '',
+      })
       setLoading(false)
     }
     load()
   }, [])
 
   const handleSave = async () => {
+    const userId = decodeAccessToken()?.sub
     if (!userId) return
     setIsSaving(true)
     setSaveError('')
-    const { error } = await supabase.from('profiles').update({
-      name: form.name,
-      phone: form.phone,
-      cnpj: form.cnpj,
-      company: form.company,
-      activity: form.activity,
-      city: form.city,
-      mei_since: form.meiSince,
-      updated_at: new Date().toISOString(),
-    }).eq('id', userId)
+    const res = await authFetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name, phone: form.phone, cnpj: form.cnpj, company: form.company,
+        activity: form.activity, city: form.city, mei_since: form.meiSince,
+      }),
+    })
 
-    if (error) {
+    if (!res.ok) {
       setSaveError('Erro ao salvar. Tente novamente.')
     } else {
       setUser({ id: userId, name: form.name, email: form.email, company: form.company, meiSince: form.meiSince })
@@ -83,12 +73,21 @@ export default function PerfilPage() {
 
   const handlePasswordChange = async () => {
     if (pwForm.next !== pwForm.confirm) { setPwMsg('As senhas não coincidem.'); return }
-    if (pwForm.next.length < 6) { setPwMsg('A senha deve ter pelo menos 6 caracteres.'); return }
+    if (pwForm.next.length < 8) { setPwMsg('A senha deve ter pelo menos 8 caracteres.'); return }
     setPwSaving(true)
     setPwMsg('')
-    const { error } = await supabase.auth.updateUser({ password: pwForm.next })
-    if (error) { setPwMsg('Erro ao alterar senha: ' + error.message) }
-    else { setPwMsg('Senha alterada com sucesso!'); setPwForm({ current: '', next: '', confirm: '' }) }
+    const res = await authFetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwForm.next }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setPwMsg('Erro ao alterar senha: ' + (data.error ?? 'tente novamente'))
+    } else {
+      setPwMsg('Senha alterada com sucesso!')
+      setPwForm({ current: '', next: '', confirm: '' })
+    }
     setPwSaving(false)
   }
 

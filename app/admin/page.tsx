@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Users, Target, CreditCard, TrendingUp, UserCheck, UserX, RefreshCw } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { useAdmin } from '@/hooks/useAdmin'
 
 interface Stats {

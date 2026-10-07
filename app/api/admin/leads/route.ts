@@ -1,46 +1,49 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-server'
+import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-auth'
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req)
   if ('error' in auth) return auth.error
 
-  const supabase = getServiceClient()
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*')
-    .in('status', ['novo', 'contatado', 'perdido'])
-    .order('created_at', { ascending: false })
+  const leads = await prisma.lead.findMany({
+    where: { status: { in: ['novo', 'contatado', 'perdido'] } },
+    orderBy: { createdAt: 'desc' },
+  })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  return NextResponse.json(leads)
 }
 
 export async function PATCH(req: NextRequest) {
   const auth = await requireAdmin(req)
   if ('error' in auth) return auth.error
 
-  const supabase = getServiceClient()
   const { id, ...updates } = await req.json()
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
-  const { error } = await supabase.from('leads').update(updates).eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  try {
+    await prisma.lead.update({ where: { id }, data: updates })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: NextRequest) {
   const auth = await requireAdmin(req)
   if ('error' in auth) return auth.error
 
-  const supabase = getServiceClient()
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
-  const { error } = await supabase.from('leads').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  try {
+    await prisma.lead.delete({ where: { id } })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }

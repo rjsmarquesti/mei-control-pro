@@ -164,7 +164,7 @@ export default function UsuariosPage() {
         ? editUser.subscription_expires_at
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString())
       : null
-    await af('/api/admin/users', {
+    const res = await af('/api/admin/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -177,6 +177,12 @@ export default function UsuariosPage() {
         subscription_expires_at: expires,
       }),
     })
+    const json = await res.json()
+    if (!res.ok || json.error) {
+      alert(`Erro ao salvar: ${json.error ?? 'Tente novamente'}`)
+      setSaving(false)
+      return
+    }
     setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...editForm, subscription_plan: editForm.plan, subscription_expires_at: expires } : u))
     setEditUser(null)
     setSaving(false)

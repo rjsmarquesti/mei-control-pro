@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { X, Plus, Trash2, Loader2, Receipt } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { authFetch } from '@/lib/session'
 
 interface DASRow {
   competencia: string // YYYY-MM
@@ -53,18 +53,26 @@ export default function DASOnboardingModal({ userId, onClose, onSaved }: Props) 
     if (valid.length === 0) { setError('Preencha ao menos um DAS.'); return }
     setSaving(true)
     setError('')
-    const inserts = valid.map(r => ({
-      user_id: userId,
-      competencia: r.competencia,
-      due_date: r.due_date,
-      value: parseFloat(r.value),
-      status: r.status,
-      paid_at: r.status === 'paid' && r.paid_at ? r.paid_at : null,
-    }))
-    const { error: err } = await supabase.from('das_payments').insert(inserts)
-    if (err) { setError(err.message); setSaving(false); return }
-    setSaving(false)
-    onSaved()
+    try {
+      for (const r of valid) {
+        const res = await authFetch('/api/das-payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            competencia: r.competencia,
+            due_date: r.due_date,
+            value: parseFloat(r.value),
+            status: r.status,
+          }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error ?? 'Erro ao salvar')
+      }
+      onSaved()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

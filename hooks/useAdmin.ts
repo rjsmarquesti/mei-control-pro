@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { authFetch, getAccessToken } from '@/lib/session'
 
 export function useAdmin() {
   const router = useRouter()
@@ -11,41 +11,31 @@ export function useAdmin() {
   const [token, setToken] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
-        if (!session) {
-          router.push('/login')
+    const accessToken = getAccessToken()
+    if (!accessToken) {
+      router.push('/login')
+      setLoading(false)
+      return
+    }
+
+    authFetch('/api/me/role', { method: 'POST' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const { role } = await res.json()
+
+        if (role !== 'admin') {
+          router.push('/dashboard')
           setLoading(false)
           return
         }
 
-        try {
-          const res = await fetch('/api/me/role', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-            body: JSON.stringify({}),
-          })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const { role } = await res.json()
-
-          if (role !== 'admin') {
-            router.push('/dashboard')
-            setLoading(false)
-            return
-          }
-
-          setToken(session.access_token)
-          setIsAdmin(true)
-        } catch (e) {
-          console.error('[useAdmin]', e)
-        } finally {
-          setLoading(false)
-        }
+        setToken(getAccessToken())
+        setIsAdmin(true)
       })
       .catch((e) => {
-        console.error('[useAdmin] getSession error:', e)
-        setLoading(false)
+        console.error('[useAdmin]', e)
       })
+      .finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { isAdmin, loading, token }
