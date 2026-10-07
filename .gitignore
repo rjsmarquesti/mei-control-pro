@@ -31,3 +31,11 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# next-pwa (gerados a cada build)
+public/sw.js
+public/workbox-*.js
+
+# protótipos soltos
+dashboard-redesign-preview.html
+landingpage-redesign-preview.html
