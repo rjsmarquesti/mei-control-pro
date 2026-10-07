@@ -1,42 +1,33 @@
-# Code Review Skill — MEI Control Pro
+﻿# Skill: Code Review — MEI Control Pro
 
-Protocolo de revisão de código com foco nas particularidades do projeto.
+Checklist de revisão para arquivos alterados na sessão.
 
-## Checklist de Revisão
+## 🔴 CRITICAL (corrigir antes de continuar)
+- `any` implícito introduzido sem cast e sem comentário
+- Chamada direta a `db.divulgabr.com.br` do browser (deve passar pelo proxy)
+- Rota `/api/admin/*` sem `requireAdmin()` ou sem Bearer token
+- Credencial, API key ou secret hardcoded
+- `.neq()` usado onde NULLs devem ser incluídos (usar `.in()` ou `.or()`)
+- `motion.tr`, `motion.td`, `motion.tbody` em tabelas (hydration mismatch)
+- Componente React definido dentro de outro componente
 
-### Segurança (CRITICAL — bloqueia)
-- [ ] Nenhum secret/key hardcoded
-- [ ] Chamadas Supabase do browser passam pelo proxy `/api/proxy`
-- [ ] Rotas admin usam service role, não anon key
-- [ ] Input de usuário validado antes de usar em queries
+## 🟡 WARNING
+- `console.log` em código de produção (apenas `console.error` em catch crítico)
+- Plano/role verificado via Supabase client no browser em vez de API route
+- `NEXT_PUBLIC_*` hardcoded no código em vez de variável de ambiente
+- `[...new Set(...)]` em vez de `Array.from(new Set(...))`
+- PlanGate ou usePlan ausente em feature restrita por plano
 
-### TypeScript (CRITICAL — bloqueia)
-- [ ] Zero uso de `any` implícito
-- [ ] Tipos explícitos em todos os parâmetros de função
-- [ ] `Array.from(new Set(...))` em vez de `[...new Set(...)]`
-- [ ] `SupabaseClient<any, any, any>` em `getServiceClient()` (evita erro de schema)
+## 🔵 INFO
+- Código duplicado que pode ser extraído para lib/ ou services/
+- Nome de variável pouco descritivo
+- Lógica não-óbvia sem comentário explicando o porquê
 
-### Arquitetura (WARNING — sugere correção)
-- [ ] API routes têm `export const dynamic = 'force-dynamic'`
-- [ ] Leituras de role/plano via API route (nunca Supabase client direto)
-- [ ] Tabela `leads`: não enviar `updated_at` (coluna não existe)
-- [ ] Filtros PostgreSQL com NULL: usar `.or()` ou `.in()`, nunca `.neq()`
-- [ ] n8n admin notifications: paralelas ao Switch, não após HTTP nodes
-
-### Estilo/UX (INFO — opcional)
-- [ ] Componentes usam CSS Variables (não cores hardcoded)
-- [ ] Dark mode e light mode funcionando
-- [ ] Loading states em operações assíncronas
-- [ ] Mensagens de erro amigáveis ao usuário
-
-## Formato de Saída
-
-Para cada finding:
+## Formato do report
 ```
-[SEVERITY] arquivo:linha
-Problema: descrição clara
-Solução: código ou ação específica
+Arquivo: [caminho/arquivo.ts]
+Linha [N]: [CRITICAL|WARNING|INFO] — [descrição]
+Sugestão: [correção concreta]
 ```
 
-Máximo 5 findings por review (priorizar os mais críticos).
-Se tudo OK: "LGTM" + parágrafo justificando.
+Se nenhum finding: "LGTM — sem violações encontradas."

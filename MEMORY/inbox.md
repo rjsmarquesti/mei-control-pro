@@ -1,35 +1,33 @@
-﻿# Inbox — Tasks Pendentes do MEI Control Pro
+# Inbox — MEI Control Pro
 
-> Claude: leia este arquivo no início de cada sessão e sugira qual task atacar.
-
-Formato: `- [ ] PRIORIDADE: descrição (contexto)`
+Tasks pendentes para próximas sessões.
 
 ---
 
-## Alta Prioridade
+## Ações manuais obrigatórias (não automatizáveis)
 
-- [ ] ALTA: Verificar se PGRST_DB_SCHEMAS ainda inclui `sismei` após último deploy Supabase (sintoma: admin não redireciona para /admin)
-- [ ] ALTA: Verificar se GOTRUE_MAILER_TEMPLATES_* não foram sobrescritos no docker-compose.yml do Supabase
+- [x] **Reconectar instância WA `sismei`** ✅ verificado 21/06/2026 (não reconfirmado desde então — se notificações WA pararem, checar de novo)
 
-## Média Prioridade
+- [x] **Migration 011 aplicada** ✅ (2026-06-02 — consents, audit_logs, lgpd_requests, triggers)
 
-- [ ] MÉDIA: Testar fluxo completo de recuperação de senha em produção (email → link → nova senha)
-- [ ] MÉDIA: Verificar se mei-das-alerta está disparando corretamente às 9h (cron n8n)
-- [ ] MÉDIA: Revisar landing page (public/landingpage-sismei.html) — atualizar se necessário no WordPress sismeipro.com.br via Elementor
+- [x] ~~Verificar migrations 006–009 no banco~~ — obsoleto (30/09/2026): Supabase removido; o schema agora vem de `prisma/migrations` (Postgres `producao/sismei-db`)
+  - [ ] Conferir que as 2 migrations do Prisma (`init`, `add_trial_started_at`) estão aplicadas em `producao/sismei-db` (`_prisma_migrations`) — não verificado em 06/10/2026
 
-## Baixa Prioridade / Ideias
+- [x] ~~Configurar MFA para admin via GoTrue~~ — obsoleto: GoTrue não existe mais e o TOTP não foi implementado na auth própria. `ADMIN_MFA_REQUIRED=true` hoje bloquearia todos os admins — não ativar até implementar TOTP
 
-- [ ] BAIXA: Considerar notificação WhatsApp quando plano está próximo de expirar (3 dias antes)
-- [ ] BAIXA: Dashboard admin: gráfico de crescimento de usuários por semana/mês
-- [ ] BAIXA: Página de status do sistema (verificar Supabase, n8n, Evolution API)
+- [ ] **Backup automático** — configurado 2026-06-02 (cron 02:00 UTC no VPS, retenção 30 dias) para o Postgres do Supabase antigo. **Não verificado se cobre o `producao/sismei-db` atual** — conferir
 
----
+- [x] **Corrigir fallback hardcoded do salt** ✅ 2026-09-29 em `admin/mei-kit-code/route.ts` (AP-001)
 
-## Concluídas Recentemente
+- [x] **Upgrade Next.js** → `^14.2.35` no `package.json` (CVE-2025-29927)
 
-- [x] Fix botões export (window.print, router.push) — 2026-04-12
-- [x] Fix DAS: link real gov.br — 2026-04-12
-- [x] Fix supabase-server.ts tipo SupabaseClient — 2026-04-12
-- [x] Manual do usuário completo — publicado
-- [x] Workflow mei-atendimento-whatsapp: admin notifications paralelas — 2026-04-12
-- [x] Setup pipeline Claude Code (CLAUDE.md, hooks, MEMORY, skills) — 2026-04-13
+- [x] ~~Rate limit dedicado em `/api/proxy`~~ — obsoleto: a rota `/api/proxy` foi removida na migração
+
+- [ ] Rate limit/auth em `POST /api/notifications/register`, `POST /api/leads` e `POST /api/auth/login-notify` (revisão de 06/10/2026)
+- [ ] Adicionar `HEALTHCHECK` no Dockerfile e definir como rodar `prisma migrate deploy` no deploy
+
+## Features / melhorias
+
+- [ ] Substituir logo texto no nav e hero da landing page pelo `logo.png` / `logo.webp` já existente em `public/`
+- [ ] Adicionar página `/dashboard/perfil` → seção "Seus Dados (LGPD)" com botão exportar e solicitar exclusão (chama `/api/lgpd/export` e `/api/lgpd/delete`)
+- [ ] Testar instalação do PWA de ponta a ponta num Android e num iOS reais (fix 2026-09-29 só foi verificado via curl/headers, não em navegador real — Playwright ficou indisponível na sessão)

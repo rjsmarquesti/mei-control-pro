@@ -15,21 +15,17 @@ try:
     if not file_path:
         sys.exit(0)
 
-    # Normaliza separadores
     normalized = file_path.replace('\\', '/')
 
-    # Verifica pastas pesadas
     for d in BLOCKED_DIRS:
         if d in normalized:
             print(f"BLOQUEADO: '{file_path}' está em pasta ignorada ({d})", file=sys.stderr)
             print("Use .claudeignore para excluir pastas do contexto.", file=sys.stderr)
             sys.exit(1)
 
-    # Verifica arquivos sensíveis
     basename = os.path.basename(normalized)
     if basename in BLOCKED_FILES or basename.startswith('.env'):
         print(f"BLOQUEADO: '{file_path}' é arquivo sensível de ambiente", file=sys.stderr)
-        print("Consulte CLAUDE.md para lista de variáveis disponíveis.", file=sys.stderr)
         sys.exit(1)
 
 except (json.JSONDecodeError, Exception):
