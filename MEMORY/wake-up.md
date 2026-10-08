@@ -2,8 +2,8 @@
 
 > Claude: leia este arquivo no início de cada sessão antes de qualquer ação.
 
-**Última sessão:** 2026-10-06
-**Último deploy:** 2026-09-30 — tag `20260930c-v1.5.2` (confirmada em `producao/app` no EasyPanel em 06/10/2026)
+**Última sessão:** 2026-10-07 00:40
+**Último deploy:** 2026-10-07 — tag `20261007a-v1.5.3` (digest `sha256:ce9451ee…`, confirmada em `producao/app`). Rollback: `20260930c-v1.5.2`.
 
 ---
 
@@ -28,7 +28,7 @@
 — (aguardando próxima feature)
 
 ### Issues abertas (revisão de código 06/10/2026)
-- 🟢 `notifications/register`, `leads` e `auth/login-notify` endurecidos em 06/10/2026 (**corrigido no código, NÃO commitado/buildado/deployado**): register e login-notify exigem Bearer e usam os dados do dono do token (register só até 10 min após o cadastro); leads continua público mas força `status:'novo'` na criação, não altera status/notes de lead existente e valida e-mail/tamanhos; rate limit no `middleware.ts` (`/api/leads` 10/min, `/api/notifications/register` 5/min). `npm test` = 22 testes (`__tests__/`). `login/page.tsx` envia o token nas 2 chamadas. Efeito conhecido: cliente PWA antigo (JS em cache) leva 401 nessas 2 chamadas — só perde o aviso de WhatsApp.
+- 🟢 `notifications/register`, `leads` e `auth/login-notify` endurecidos (commit `d31a77b`, **deployado em 07/10/2026 na `v1.5.3`**, verificado em produção por sondas sem escrita; golden path no navegador ainda NÃO testado): register e login-notify exigem Bearer e usam os dados do dono do token (register só até 10 min após o cadastro); leads continua público mas força `status:'novo'` na criação, não altera status/notes de lead existente e valida e-mail/tamanhos; rate limit no `middleware.ts` (`/api/leads` 10/min, `/api/notifications/register` 5/min). `npm test` = 22 testes (`__tests__/`). `login/page.tsx` envia o token nas 2 chamadas. Efeito conhecido: cliente PWA antigo (JS em cache) leva 401 nessas 2 chamadas — só perde o aviso de WhatsApp.
 - 🟡 MFA admin não existe na auth própria — **não ativar** `ADMIN_MFA_REQUIRED=true` (bloquearia todos os admins)
 - 🟡 `Dockerfile` sem `HEALTHCHECK` e sem `prisma migrate deploy` no deploy (migrations são manuais)
 - 🟡 Projeto sem testes automatizados
@@ -40,7 +40,7 @@
 
 ## Contexto Crítico
 
-- **Docker:** `rjsmarquesti/mei-control-pro:20260930c-v1.5.2` → EasyPanel: producao → app → Implantar
+- **Docker:** `rjsmarquesti/mei-control-pro:20261007a-v1.5.3` → EasyPanel: producao → app (trocar imagem em `set_app_source_image` + deploy). Rollback: `20260930c-v1.5.2`
 - **Banco:** `producao/sismei-db` (Postgres); `DATABASE_URL`, `JWT_SECRET` e `REFRESH_SECRET` são obrigatórios no env do `producao/app`
 - **Evolution API:** instância `sismei` (NÃO alterar o nome)
 - **Nome do produto:** MEI Control Pro (NUNCA "SisMEI" ou "Sismei")
