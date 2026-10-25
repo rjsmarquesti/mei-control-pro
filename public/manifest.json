@@ -8,18 +8,43 @@
   "background_color": "#0f172a",
   "theme_color": "#7C3AED",
   "orientation": "portrait-primary",
+  "id": "/dashboard",
   "icons": [
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Receitas",
+      "short_name": "Receitas",
+      "url": "/dashboard/receitas"
+    },
+    {
+      "name": "DAS e Impostos",
+      "short_name": "DAS",
+      "url": "/dashboard/das"
     }
   ],
   "categories": ["business", "finance", "productivity"],

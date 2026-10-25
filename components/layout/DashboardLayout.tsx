@@ -8,6 +8,7 @@ import { usePlan } from '@/hooks/usePlan'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { MobileNav } from './MobileNav'
+import { InstallPrompt } from './InstallPrompt'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -41,6 +42,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </main>
       </div>
       <MobileNav />
+      <InstallPrompt />
     </div>
   )
 }
