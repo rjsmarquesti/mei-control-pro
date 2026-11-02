@@ -33,17 +33,6 @@ export default function CaptacaoPage() {
       })
       if (!res.ok) throw new Error('Erro ao enviar')
 
-      // Notify admin via n8n
-      try {
-        await fetch('https://n8n.divulgabr.com.br/webhook/mei-lead', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone, city }),
-        })
-      } catch {
-        // notification is optional
-      }
-
       setSuccess(true)
     } catch (err: any) {
       setError('Erro ao enviar. Tente novamente.')
